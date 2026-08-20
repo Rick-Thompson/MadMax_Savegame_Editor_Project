@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+snapshots/
+snapshots_*/
+_bak_*/
+_original_backup/
+_test_variants/
+*.pkl
+/tmp/
+_to_delete/

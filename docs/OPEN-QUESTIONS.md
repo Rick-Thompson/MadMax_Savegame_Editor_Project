@@ -1,0 +1,101 @@
+# Open questions
+
+Ranked by how tractable they look. Each one includes what has already been ruled
+out, so nobody repeats the dead ends in [FINDINGS.md](FINDINGS.md).
+
+---
+
+## 1. Can a convoy be made to respawn?
+
+**Status: four probes failed. Every byte in the file that parses is accounted
+for.** See [FINDINGS.md](FINDINGS.md) for the full record.
+
+Two leads remain.
+
+**1a. The unparsed gap.** Between the end of the roster table and the start of
+the property store there are roughly 6 KB that do not parse as either a record
+stream or a table. In one sample that is `0x11194`..`0x1AD88`. A support car
+left over from the fight persisted across probes 2 and 3 with its blown tyre
+intact, so live world entities are stored *somewhere*, and this gap is the last
+candidate. Nothing is known about its structure yet.
+
+**1b. The executable.** If convoy availability is computed at load time from
+region or territory progression rather than read from the save, no save edit
+will ever work. Testing this needs static analysis of the game binary rather
+than more save diffing. Finding the code that reads the roster's type-53 entries
+would settle the question in either direction.
+
+A cheap experiment that has not been run: check whether a convoy that has been
+*seen but not engaged* differs from one never encountered, using the property
+store. The route appearing on the map added 559 property records in one
+snapshot. If any of those are per-convoy, that is the availability flag.
+
+## 2. The integrity value at offset 0
+
+**Status: worked around, not solved.**
+
+The workaround — read the delta off the original file, carry it across the edit
+— is reliable but constrains every edit to preserve file length. Solving it
+properly would remove that constraint.
+
+What is known: the delta depends **only on file length**, never on content. Five
+independent files of length 1020928 share delta `0x0E7EDB6E` despite differing in
+thousands of payload bytes.
+
+What has been ruled out, across ten distinct file lengths: CRC-32 over plain
+ranges with solved init/xorout, CRC-32C, Koopman, CRC-32Q, FNV, Jenkins, Adler,
+byte-sum, per-save seed fields, several byte orderings, and length values
+prepended or appended in four encodings. Nothing fits three or more lengths.
+
+The likeliest explanation is that the length dependence comes from something
+structural — a count, a padding rule, a second pass — rather than from a
+different polynomial. Someone with the binary in a disassembler would find this
+in an afternoon.
+
+## 3. Unlabelled object types
+
+Ten of the roster's type ids have no label: **5, 10, 11, 12, 17, 26, 37, 40, 41,
+69**. Types 11, 17, 26, 37 and 69 are never cleared even at 100% completion, so
+they are probably scenery or permanent structures. Types 5, 10, 12, 40 and 41
+are only partially cleared, which makes them the interesting ones.
+
+Labelling one takes about two minutes: destroy one in game, save, run
+`sec2.py before.sav after.sav`, note which type moved. Per-type counts are in
+[OBJECT-TYPES.md](OBJECT-TYPES.md).
+
+## 4. The rest of the resource stream
+
+Scrap is record id 42, an f32. Ids **41, 26 and 28** change plausibly with
+health, fuel and water but have not been confirmed. Confirming one is a
+five-minute experiment: note the value in game, save, change only that resource,
+save again, diff.
+
+## 5. The 42 KB blob
+
+Property store record `16336C91` is a 42 KB value rewritten on nearly every
+save. It is by far the largest single record in the file and its contents are
+completely unexamined. It may be a heightmap-style visited/discovered mask, a
+photo-mode buffer, or a serialised entity graph — nobody has looked.
+
+## 6. Are the tracking rows reconstructible?
+
+The game regenerated 18 of 22 deleted tracking rows on the next autosave, with
+identical keys and flags. Whatever it rebuilds them from is more authoritative
+than the table itself, and finding it would probably answer question 1 as well.
+The four rows it did *not* regenerate may be the informative ones — they were
+never identified.
+
+## 7. Platform coverage
+
+Everything here was worked out on Linux under Proton, plus four older Windows
+saves via OneDrive. The XOR key, header layout and integrity behaviour are
+identical across both, and across save format generations 2 and 6. Consoles are
+entirely untested.
+
+## 8. Position editing
+
+Record `id 0` in the record stream is a 64-byte 4x4 transform — a
+respawn/checkpoint position, not the player's live position. Writing to it has
+not been tried. Since the game always resumes at the nearest base, it is not
+obvious this would do anything, but it is cheap to test and would be useful for
+reaching out-of-bounds areas.
