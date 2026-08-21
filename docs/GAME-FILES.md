@@ -319,8 +319,39 @@ That settles the six failed probes. Roster state, marker rows and the table-2
 position are all downstream of this container record, which is why restoring any
 of them in isolation did nothing.
 
-`--state` sets the value to write, so the encoding can be tested directly:
+`--state` sets the value to write, so the encoding was tested directly:
 
 ```
 convoy.py reset IN.sav OUT.sav --slot 9 --state 2
 ```
+
+**State 2 restores the convoy completely.** In game, on both saves: the routes
+are marked in red on the map, and driving to one gives a full working convoy -
+lead truck, escorts, the whole encounter, behaving normally.
+
+So the encoding, confirmed end to end:
+
+| state | in the world | on the map |
+|---|---|---|
+| **0** | convoy present | not marked - undiscovered |
+| **2** | convoy present and complete | **marked in red, fully playable** |
+| **3** | wrecked, position frozen at the wreck | cleared |
+
+One 32-bit field per convoy, and it is the whole switch. Everything else the
+game writes about a convoy - the roster flag, the marker rows, the position row,
+the vehicle ledger - follows from it.
+
+### Why this is repeatable for other activities
+
+The route in is worth stating as a method, because nothing about it was
+convoy-specific:
+
+1. find the activity's data bundle (`global/convoys.bl`) with the file list
+2. unpack the SARC, decode the RTPC inside it
+3. look for entities with **`save = 1`** - those and only those are persisted
+4. take their `objectid` values
+5. look those objectids up as keys in the save's property store
+
+Step 3 is the one that does the work. Out of 263 entities in the convoy bundle,
+28 have `save = 1`, and they were the answer. Camps, minefields, sniper towers
+and the rest have their own bundles, and the same five steps should apply.

@@ -1,8 +1,15 @@
 # The convoy investigation
 
 The goal that drove most of this project: make a cleared activity replayable.
-It worked for static props and failed for convoys. This is the complete record,
-failures included, so nobody has to repeat it.
+
+**It is solved** - see [GAME-FILES.md](GAME-FILES.md) for the record that does
+it. This document is the road there, six failed probes included, because the
+failures are the useful part: every one of them was a real edit to a real field
+that genuinely tracks convoy state, and none of them worked.
+
+The lesson, stated once: **a field that changes when something happens is not
+necessarily the field that causes it.** Roster state, marker rows and the
+table-2 position all move when a convoy dies. All three are downstream.
 
 ---
 

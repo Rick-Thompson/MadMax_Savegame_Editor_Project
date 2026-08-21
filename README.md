@@ -3,12 +3,23 @@
 Reverse-engineering notes and a working save editor for Avalanche Studios'
 *Mad Max* (2015, Steam app id 234140).
 
-**Status: the container format is fully solved.** Saves can be decoded, edited,
-re-sealed and loaded by the game. Destroyed static world objects can be put
-back — verified in game, both directions, individually and in bulk. Scrap can
-be set to any value. Dynamic encounters (convoys) can be *marked* un-cleared but
-do respawn - see [docs/GAME-FILES.md](docs/GAME-FILES.md); the earlier failures are in [docs/FINDINGS.md](docs/FINDINGS.md), for exactly how far
-that has been chased and where it stopped.
+**Status: solved, including convoys.** Saves can be decoded, edited, re-sealed
+and loaded by the game. Destroyed static world objects can be put back. Scrap
+can be set to any value. And **cleared convoys can be fully restored** - verified
+in game, on a live playthrough and on a 100% save: the routes come back marked
+in red on the map, and driving to one gives a complete, working convoy.
+
+```
+convoy.py reset SAVE.sav OUT.sav --slot N --state 2
+```
+
+`--state 0` brings them back undiscovered instead - present in the world, not
+yet on the map.
+
+That took a while. Six earlier attempts failed because they edited records that
+*describe* a convoy rather than the one that governs it; the history is in
+[docs/FINDINGS.md](docs/FINDINGS.md) and the answer is in
+[docs/GAME-FILES.md](docs/GAME-FILES.md).
 
 This is published so other people can take it further. Everything here is
 reproducible from the sample saves in `data/`.
