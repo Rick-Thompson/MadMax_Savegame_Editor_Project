@@ -27,6 +27,7 @@ reproducible from the sample saves in `data/`.
 | diff the hash-named property store | `tail.py` | yes |
 | edit a property record in place | `tailedit.py` | yes |
 | map a payload and show the gaps | `mapsave.py` | yes |
+| recover names for the hashes | `names.py` | partly |
 | restore a destroyed scarecrow, sniper tower, etc. | `mmworld.py --restore-type` | **yes, in game** |
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
 | set scrap | `resource.py set 42=N` | **yes, in game** |
@@ -76,6 +77,7 @@ docs/
   METHODOLOGY.md          how to run a save-diff experiment without fooling yourself
   OPEN-QUESTIONS.md       what is still unsolved, and what to try next
   OBJECT-TYPES.md         the 1520-entry object roster, per-type counts
+  HASHES.md               the name hash, and how to recover names from game files
 tools/                    the Python utilities (see tools/README.md)
 data/
   ladder/                 PT1-PT6, a 0% -> 100% reference ladder
@@ -105,14 +107,21 @@ length-preserving edit. Full detail in [docs/FORMAT.md](docs/FORMAT.md).
 
 The most useful things anyone could add:
 
-1. **A convoy respawn.** Four probes have failed. `docs/OPEN-QUESTIONS.md` lists
-   what is left to try, mostly on the executable side rather than the save.
-2. **A closed-form solution to the integrity value.** The delta-carry workaround
+1. **A name dictionary.** Every key in a save is a Jenkins `lookup3` hash of a
+   name, and exactly one of them is currently named. The names live in the
+   compressed `.arc` archives. Decompressing those and harvesting the strings
+   would turn most of this project from diffing into reading - see
+   [docs/HASHES.md](docs/HASHES.md). This is the highest-leverage thing on the
+   list by a wide margin.
+2. **A convoy respawn.** Six probes have failed, and 30% of the payload is still
+   unmapped. `docs/OPEN-QUESTIONS.md` has the capture protocol that would
+   measure the answer instead of guessing at it.
+3. **A closed-form solution to the integrity value.** The delta-carry workaround
    means edits must preserve file length. Solving it properly would lift that.
-3. **Object type labels.** Types 5, 10, 11, 12, 17, 26, 37, 40, 41, 69 are
+4. **Object type labels.** Types 5, 10, 11, 12, 17, 26, 37, 40, 41, 69 are
    unidentified. Labelling one takes about two minutes: destroy one thing in
    game, save, and diff.
-4. **Windows / other-platform confirmation.** Everything here was worked out on
+5. **Windows / other-platform confirmation.** Everything here was worked out on
    Linux under Proton plus four older Windows saves.
 
 Please include the before/after saves with any finding. Half the wrong turns
