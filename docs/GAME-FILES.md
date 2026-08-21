@@ -303,3 +303,24 @@ roster: 13 convoys set to 3.0 ; table 2: 13 position rows cleared
 property store: 14 container records zeroed
 payload 521552 -> 521552 ; file 1043456 -> 1043456 (unchanged - delta valid)
 ```
+
+### Verified in game
+
+State `0` works. A save with every convoy container zeroed loads, and the
+convoys come back **undiscovered** - present again, not yet marked on the map.
+Confirmed on both a live playthrough save and the 100% reference save.
+
+The game then re-saved both slots and *kept* the edit: all thirteen type-53
+roster entries still `3.0`, all fourteen containers still zero. So this is not a
+value the game overwrites from somewhere more authoritative - it is the record
+itself.
+
+That settles the six failed probes. Roster state, marker rows and the table-2
+position are all downstream of this container record, which is why restoring any
+of them in isolation did nothing.
+
+`--state` sets the value to write, so the encoding can be tested directly:
+
+```
+convoy.py reset IN.sav OUT.sav --slot 9 --state 2
+```

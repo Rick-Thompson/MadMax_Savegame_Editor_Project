@@ -7,7 +7,7 @@ Reverse-engineering notes and a working save editor for Avalanche Studios'
 re-sealed and loaded by the game. Destroyed static world objects can be put
 back — verified in game, both directions, individually and in bulk. Scrap can
 be set to any value. Dynamic encounters (convoys) can be *marked* un-cleared but
-do not respawn; see [docs/FINDINGS.md](docs/FINDINGS.md) for exactly how far
+do respawn - see [docs/GAME-FILES.md](docs/GAME-FILES.md); the earlier failures are in [docs/FINDINGS.md](docs/FINDINGS.md), for exactly how far
 that has been chased and where it stopped.
 
 This is published so other people can take it further. Everything here is

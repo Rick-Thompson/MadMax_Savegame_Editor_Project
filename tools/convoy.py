@@ -15,7 +15,8 @@ moving position is the convoy whose roster state later drops to 0.0.
 
   convoy.py list SAVE.sav
   convoy.py revive IN.sav OUT.sav --roster 593B2B20 [--misc 194895AE] [--slot N]
-  convoy.py reset  IN.sav OUT.sav [--slot N]      reset ALL convoys to unmet
+  convoy.py reset  IN.sav OUT.sav [--slot N] [--state S]   set ALL convoys to state S
+                                                  (default 0 = unmet)
 
 The authoritative record is none of the above three: it is the 32-byte blob the
 property store keys by each convoy's **CConvoyDataContainer objectid**, taken
@@ -85,7 +86,7 @@ def cmd_revive(inp,out,rk,mk,slot):
                sets=[(a,"%08X"%b,c.hex()) for a,b,c in sets])
     for a,b,c in sets: print("set %s %08X -> %s"%(a,b,c.hex(' ')))
 
-def cmd_reset(inp,out,slot):
+def cmd_reset(inp,out,slot,state=0):
     import tempfile
     te=_l('tailedit.py')
     d,h,head,s2=se.split(inp); ts=se.tables(s2); r=se.roles(ts)
@@ -114,9 +115,10 @@ def cmd_reset(inp,out,slot):
         if rr is None: continue
         off,idx,rl,hh,vl,v=rr
         if vl!=32: print("  warning: %08X is %d bytes, expected 32 - skipped"%(k,vl)); continue
-        if not any(v): continue
-        d2[off+24:off+24+32]=b'\0'*32; n+=1
-    print("  property store: %d container records zeroed"%n)
+        new=bytearray(32); struct.pack_into('<I',new,28,state)
+        if bytes(v)==bytes(new): continue
+        d2[off+24:off+24+32]=bytes(new); n+=1
+    print("  property store: %d container records set to state %d, position cleared"%(n,state))
     body=bytes(d2)
     if len(body)!=len(orig): sys.exit("length changed - refusing")
     m.save(out, m.reseal(body, m.delta_of(orig)))
@@ -128,7 +130,8 @@ if __name__=='__main__':
     if a[0]=='list': cmd_list(a[1])
     elif a[0]=='reset':
         s=(int(a[a.index('--slot')+1]) if '--slot' in a else None)
-        cmd_reset(a[1],a[2],s)
+        st=(int(a[a.index('--state')+1]) if '--state' in a else 0)
+        cmd_reset(a[1],a[2],s,st)
     elif a[0]=='revive':
         inp,out=a[1],a[2]
         g=lambda n:(int(a[a.index(n)+1],16) if n in a else None)
