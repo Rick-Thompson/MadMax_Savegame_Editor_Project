@@ -121,6 +121,30 @@ matches under a plain identifier regex and 6752 real ones under the
 NUL-delimited one. In practice this is now moot: `arcx.py` extracts real files,
 which beats scraping compressed bytes.
 
+## Brute force: where it helps
+
+Worth being precise, because the two hash problems in this project have opposite
+shapes.
+
+**The save's keys are not a brute-force target.** `lookup3` is 32-bit and not
+cryptographic - a GPU finds a preimage for any single key in well under a
+second. That is exactly the problem. Against 2178 keys you would get 2178
+"answers", all of them arbitrary strings that happen to collide, and no way to
+tell them from the real names. The constraint is not compute, it is not knowing
+what kind of string went in.
+
+**Graph pin and class names are.** There the convention is known - lowercase
+snake_case, `in_` / `out_` prefixes, drawn from game vocabulary - the target set
+is a few hundred concrete hashes, and a wrong answer is visible because it reads
+wrong in context. A ~700k-candidate CPU sweep took seconds and resolved 22 of
+559. Sweeping three-token combinations over a two-thousand-word vocabulary with
+all the prefix and suffix forms is on the order of 10^10-10^11 hashes, which is
+a GPU job and a well-shaped one.
+
+Note that hashcat has no `lookup3` mode, so this needs a small custom kernel
+rather than stock hashcat - the function is about 40 lines and the whole thing
+is embarrassingly parallel.
+
 ## Next
 
 The save-key scheme is open. Ways in, roughly in order of cost:

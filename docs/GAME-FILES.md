@@ -154,3 +154,70 @@ says - 16 nodes that position the map icon (`ObjectGetTransform`,
 `ObjectSetTransform`, `SendGlobalEvent`). The spawn *decision* is not in it, so
 the next files to read are `convoy_choreographer.gsrc` and whatever
 `graphs/spawning/spawn_ids_update_prio_on_range.gsrc` leads to.
+
+## The rest of the convoy set
+
+All eleven graphs decode. Node-class inventories, which is most of the story:
+
+| graph | lines | what it does |
+|---|---|---|
+| `convoy_choreographer` | 2438 | **the state machine** - `ConvoyDataGetWrecked`, `DatablockIntArrayInit`, `SpawnRequestDespawnOnDestroy`, `SpawnPriorityEnum` x4, `GameStateInRun`, `GetEconomyResourceId`, `FindObjectByAlias` |
+| `convoy_wreck_handler` | 1868 | `GUIXSetConvoyRouteWrecked`, `GUIXSetConvoyRouteRelicCollected`, `RelicIsCollected` x2, `DatablockIntArraySize` x2 |
+| `convoy_navigation_handler` | 200981 B | route following |
+| `convoy_is_position_near_route` | 237 | `RoadGetNearestEdgeId`, `RoadPathCacheContainsEdgeId`, `RoadPathCacheInsideExtents` |
+| `convoy_notify_gui_of_route` | 233 | `GUIXAddConvoyRoute`, `RoadBuildPathsForRoute` |
+| `convoy_update_time_on_route` | 387 | accumulates a float against player distance |
+| `hood_ornament_load` | 223 | `ObjectWithAliasExists`, `ExternalVariableDatablock` |
+| `hood_ornament_ready_to_equip` | 140 | `RigidObjectMakeDynamic`, `CharacterDialogueMuteChildren` |
+| `hood_ornament_unload_update_map_icon` | 296 | `MapIconSetPosition`, `FindByNameInObjectHierarchy` |
+| `spawn_ids_update_prio_on_range` | 303 | `GetSpawnStatus`, `DatablockIntArrayIterate`, `DatablockIntArrayIterateRemove` |
+| `convoy_spawner_mapicon_handler` | 381 | just the map icon |
+
+**Spawning is driven by a datablock int array**, not by anything in the save we
+have identified. `spawn_ids_update_prio_on_range` iterates an int array of spawn
+ids out of a datablock, asks `GetSpawnStatus` for each, and adjusts priority by
+range to the player - and `IterateRemove` takes entries *out* of that array. The
+choreographer calls `DatablockIntArrayInit` and gates on `ConvoyDataGetWrecked`.
+
+So the shape is: a runtime array of spawnable ids, initialised from convoy data,
+with wrecked convoys removed. Whether that array is rebuilt from the save on
+load, or persisted, is the question - and it is a question about a datablock, a
+structure this project has not looked for at all.
+
+## Pin names follow a convention, and it is recoverable
+
+Graph pin names hash the same way as everything else. A short candidate sweep
+resolved 22 of the 559 distinct unresolved hashes across the decoded graphs, and
+the recovered names make the convention obvious - lowercase snake_case, `in_` /
+`out_` prefixes:
+
+```
+C94BA74A x101  in                0A7C4A95  out_transform    05D54FDE  out_pos
+75DD9B5C x5    relic_id          9585D45C  out_priority     13E69FE3  wrecked
+BAFB74B7       convoy_data       E3E153A7  wreck_transform  8EA1E143  in_map_icon
+1E8D41B7       out_size          AEAB5CF7  spawn_id         34076868  road_distance
+```
+
+The remaining 537 are a coverage problem over a combinatorial name space, not a
+cryptographic one. See [HASHES.md](HASHES.md#brute-force-where-it-helps).
+
+## A correction, and a useful negative
+
+`RelicIsCollected` suggested an obvious hypothesis: the convoy will not come
+back because its hood ornament was collected. Checking the save says otherwise.
+
+Picking up an ornament flips exactly two property-store records from `0` to `1`:
+
+```
+700ABC4F   u32 0 -> 1
+796FABD2   u32 0 -> 1
+```
+
+confirmed on two independent before/after pairs. In the snapshot series that
+this project's convoy probes were built from, **both flags are `0` in every
+frame, 031 through 037.** The ornament was never picked up in that session.
+
+That corrects a note in this repo's earlier write-up, which described the
+034 -> 036 transition as "the artifact pickup" - it was not. And it kills the
+hypothesis: that convoy was wrecked with its relic still uncollected, and it
+still did not respawn after six probes. Relic state is not the gate.
