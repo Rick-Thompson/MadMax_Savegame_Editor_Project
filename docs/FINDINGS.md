@@ -56,7 +56,7 @@ Additional facts established along the way:
 
 ---
 
-## 3. The four failed probes
+## 3. The failed probes
 
 | # | edit | result |
 |---|---|---|
@@ -93,29 +93,90 @@ destroyed a convoy" — not of per-convoy state.
 
 ---
 
-## 5. Conclusion
+## 4a. The vehicle ledger — 13 records that track the convoy itself
 
-**The only per-convoy persistent state in the entire save file is
-`roster[key].state`, plus a live position row that is pure telemetry.**
+Re-reading the property store across the whole session, rather than only across
+the kill, turned up a group the kill-only diff could not see because **they were
+written when the convoy spawned, not when it died**:
 
-There is no hidden completion record. The record stream is silent on convoys,
-the tracking table is derived, and the property store only counts firsts. Every
-byte that parses has now been accounted for.
+| hash | 023-031 | 032 (spawn) | 033 | 034 (kill) | 036 (drove off) | 037 |
+|---|---|---|---|---|---|---|
+| `23C77753` and 12 others | absent | `1` | `1` | `1` | `FF01` | `FF01` |
 
-Two readings are consistent with the evidence, and distinguishing them requires
-looking at the executable rather than the save:
+Thirteen records, identical timing, identical values, moving as one block:
 
-1. **Spawn gating is code-side.** Convoy availability may be computed from
-   region/territory progression at load time rather than read from the save, in
-   which case no save edit can bring one back.
-2. **There is a fifth structure.** A support car left over from the fight —
-   still carrying the tyre the player had shot off — survived probes 2 and 3
-   intact. Live world entities persist somewhere. The property store turned out
-   not to be it, but the region between the roster table and the property store
-   is a few kilobytes that still do not parse as anything.
+- **absent** before the convoy has ever spawned
+- **`1`** from the moment the route appears on the map, through the whole fight
+- **`0xFF01`** once the wrecks despawn
 
-Item 2 is the cheapest remaining lead and is written up in
-[OPEN-QUESTIONS.md](OPEN-QUESTIONS.md).
+Thirteen is the size of the convoy - lead truck plus escorts. The read is that
+this is a per-vehicle ledger: absent = never instantiated, `1` = live,
+`FF01` = gone.
+
+The same thirteen hashes appear in the reference ladder, absent in PT1 and
+`FF01` in PT2 through PT6 - and PT2 is the first stage where this same convoy
+(`593B2B20`) is dead. So the names are static spawn-point identifiers baked
+into the game data, not per-playthrough handles, which is what makes them worth
+editing.
+
+This is the "live world entities persist somewhere" gap from probe 3 - the
+support car that kept its shot-out tyre. It was in the property store after
+all; the kill-only diff just could not see records that had been written two
+frames earlier.
+
+---
+
+## 4b. How convoys respawn naturally
+
+From a player on the Steam forums, and consistent with everything measured
+here:
+
+> you can blow a wheel off the big truck with shotgun, or pull it off with
+> harpoon [...] to disable the truck **without destroying it**. [...] Then you
+> just leave the truck there without blowing it up, and the whole convoy will
+> respawn.
+
+Same poster, on camps: leave one scrap pile behind when clearing a camp and the
+enemies respawn.
+
+This reframes the problem. The game already has a respawn path; it is gated on
+the encounter never having been *resolved*. So the target is not to reconstruct
+a convoy from scratch, it is to find every byte that says "resolved" and put it
+back to "never happened". The roster flag was one. The vehicle ledger is very
+likely another - a restored roster entry sitting next to thirteen records that
+say the vehicles are destroyed is a contradictory state, and the ledger is the
+half that describes the encounter instance.
+
+---
+
+## 5. Conclusion so far
+
+**Per-convoy persistent state, as currently known:**
+
+| structure | what it holds | tried? |
+|---|---|---|
+| `roster[key].state` | `3.0` alive / `0.0` destroyed | yes - probes 1-3, not sufficient |
+| table 2 position row | live telemetry, frozen at the wreck | yes - probe 4, not sufficient |
+| **property store, 13 vehicle records** | absent / `1` / `FF01` per vehicle | **probes A and B, pending** |
+
+Probe 4 (roster restored **and** position row zeroed, so that the save matches a
+never-spawned convoy in both places) was built and loaded: **the convoy stayed
+cleared.** That rules out the position row as the gate and leaves the vehicle
+ledger as the live lead.
+
+The two pending probes are both length-preserving, so neither risks the
+checksum:
+
+- **Probe A** - roster `3.0`, position zeroed, thirteen ledger records set back
+  to `1`. Says "the convoy is alive and so are its vehicles".
+- **Probe B** - same, but the thirteen records are *orphaned* (their hashes
+  rewritten so nothing can look them up), reproducing the pre-spawn state where
+  the records simply do not exist. This is the closer match to frame 031.
+
+If both fail, the remaining reading is that spawn gating is computed from
+region/territory progression at load time rather than read from the save, in
+which case no save edit brings a convoy back. That would be a real answer too,
+and it is written up in [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md).
 
 ---
 

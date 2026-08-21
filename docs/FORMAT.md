@@ -204,20 +204,48 @@ worked out. It is a single stream of
 ```
 u32 index      sequential, starts at 1
 u32 reclen     = 16 + vallen
-u64 hash       stable name key, high 32 bits always zero
+u64 hash       stable name key - a full 64-bit value
 u64 vallen
 u8  value[vallen]
 ```
 
-**sorted ascending by hash**, ~1600 records in an early save and 10706 in the
-100% reference save. Records are only ever *added*, never removed - it is an
+**sorted ascending by hash**, 712 records in the 0% reference save and 10738 in
+the 100% one. Records are only ever *added*, never removed - it is an
 append-only global registry of named properties.
 
-Two things had hidden this until now. The index field made a naive
+A 32-byte header sits immediately **before** the first record:
+
+| offset from first record | type | meaning |
+|---|---|---|
+| `-32` | u64 | magic `0x4CF2625A` |
+| `-24` | u32 | arena size - a few dozen bytes larger than the records occupy |
+| `-20` | u32 | reserve, `0` / `3072` / `6144` |
+| `-16` | u32 | `0` |
+| `-12` | u32 | `8` |
+| `-8` | **u32** | **record count** - exact, use it to validate a parse |
+| `-4` | u32 | `0` |
+
+The count field is the parser's ground truth. If a walk does not end on exactly
+that many records, the walk is wrong.
+
+Two things had hidden this structure. The index field made a naive
 `(id, size, value)` walker lock on and produce plausible-looking garbage split
 into "nine streams", and the index shifts by one for every record inserted
 ahead of it, so index-keyed diffs showed hundreds of spurious changes. **Key by
-the hash.** Doing that drops a convoy-kill diff from ~2200 noisy features to 28.
+the hash.** Doing that drops a convoy-kill diff from ~2200 noisy features to 29.
+
+### A wrong turn worth recording
+
+The first working parser required the top 32 bits of the hash to be zero,
+because every record it had seen so far satisfied that. It does not hold: the
+last few hundred records in every save have hashes above `2^32`, and the check
+silently truncated the stream there. Nothing errored - the parse just stopped
+early and looked complete, and PT6 read as 10706 records instead of 10738.
+
+The count field above is what caught it, which is why it is worth checking on
+every parse rather than trusting a clean-looking walk. Re-running the convoy
+analysis against the full stream added one changed record (a distance counter)
+and left every conclusion standing, but that was luck, not method.
 
 Values are small and typed by length: `u8` flags, `u32` counters, `f32`, 12/32/41
 byte structs, one 42 KB blob (`16336C91`, rewritten on nearly every save).

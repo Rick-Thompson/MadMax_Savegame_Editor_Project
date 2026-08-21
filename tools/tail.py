@@ -28,7 +28,7 @@ def _walk(d,o,hi):
         idx,rl=struct.unpack_from('<II',d,o)
         if rl<16 or rl>1<<16 or o+8+rl>hi: break
         hh,vl=struct.unpack_from('<QQ',d,o+8)
-        if hh>>32 or vl+16!=rl: break
+        if vl+16!=rl: break
         if (li is not None and idx!=li+1) or hh<=lh: break
         out[hh]=d[o+24:o+24+vl]; li=idx; lh=hh; o+=8+rl
     return out,o

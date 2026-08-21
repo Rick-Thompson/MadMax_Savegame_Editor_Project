@@ -25,6 +25,7 @@ reproducible from the sample saves in `data/`.
 | list / diff the record stream | `madmax_save.py records / rdiff` | yes |
 | map and diff the section-2 tables | `sec2.py` | yes |
 | diff the hash-named property store | `tail.py` | yes |
+| edit a property record in place | `tailedit.py` | yes |
 | restore a destroyed scarecrow, sniper tower, etc. | `mmworld.py --restore-type` | **yes, in game** |
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
 | set scrap | `resource.py set 42=N` | **yes, in game** |

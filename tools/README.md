@@ -18,6 +18,15 @@ madmax_save.py peek / decode         raw access to the decoded payload
 sec2.py A.sav B.sav                  map and diff the four section-2 tables
 tail.py SAVE.sav                     locate the property store, count records
 tail.py A.sav B.sav                  diff the property store by hash  <- start here
+
+tailedit.py list IN.sav [PREFIX ...] list property records, with offsets
+tailedit.py edit IN.sav OUT.sav --set HASH=HEX --orphan HASH [--slot N]
+                                     --set replaces a value of the SAME length.
+                                     --orphan is a length-preserving soft
+                                     delete: the record's hash is rewritten to
+                                     (previous hash + 1) so it stays sorted but
+                                     nothing can look it up. Use only on
+                                     records the game recreates on demand.
 convoy.py list SAVE.sav              the 13 convoys: roster state + position row
 mmworld.py SAVE.sav --status         what is destroyed, by object type
 resource.py list SAVE.sav            the resource stream (scrap is id 42)
