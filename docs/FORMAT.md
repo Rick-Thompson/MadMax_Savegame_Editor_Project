@@ -256,6 +256,43 @@ record stream in section 1.
 
 ---
 
+## 6.3 The unmapped regions
+
+Roughly **30% of the payload does not parse** as any of the structures above.
+`tools/mapsave.py` prints the layout of any save and marks the gaps; run it
+before assuming a diff has covered everything.
+
+A typical mid-game save:
+
+```
+known  0x0000F0..0x007A8B   31131 bytes  section 1 record stream (2877 recs)
+known  0x007A98..0x007BFC     356 bytes  table 0 live     esz=8  cnt=41
+known  0x007D58..0x008124     972 bytes  table 1 markers  esz=16 cnt=59
+known  0x008130..0x0082EC     444 bytes  table 2 convoys  esz=32 cnt=13
+known  0x0082F8..0x011194   36508 bytes  table 3 roster   esz=24 cnt=1520
+?????? 0x011194..0x01AD68   39892 bytes  REGION A
+known  0x01AD68..0x02B4AF   67399 bytes  section 3 property store (2184 recs)
+?????? 0x02B4AF..0x02FB18   18025 bytes  REGION B
+```
+
+**Region A** is a live world-entity arena. It opens with a 32-byte header,
+magic `0xF9715A12`, laid out like the property-store header - magic, arena size,
+reserve, `0`, `8`, size. Inside are **547 slots marked by `0xDEADBEEF`** at
+strides of 44, 52, 96, 192, 244, 288 and 384 bytes; the count is 547 in every
+frame examined, so it is a fixed pool rather than a list. Each slot carries a
+hash, a type word and a world position as three floats. Further in, at about
+`+0x7700`, sit counters that track the property store, and from `+0x7900` a
+sorted ascending hash array that shifts on every insert.
+
+**Region B** is easier: ordinary `(u32 id, u32 size, value)` streams with
+sequential ids. `resource.py` reads one of them - scrap is id 42.
+
+Neither region is understood well enough to edit safely. Region A is the more
+interesting of the two: it is where a shot-up support car persisted across
+edits that wiped every other trace of the fight.
+
+---
+
 ## 7. What can and cannot be restored
 
 **Static world props can be restored. Dynamic encounters cannot — yet.**

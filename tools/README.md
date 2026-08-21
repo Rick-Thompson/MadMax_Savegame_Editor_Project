@@ -16,6 +16,9 @@ madmax_save.py rdiff A.sav B.sav     diff section-1 records by id
 madmax_save.py peek / decode         raw access to the decoded payload
 
 sec2.py A.sav B.sav                  map and diff the four section-2 tables
+mapsave.py SAVE.sav                  print the payload layout and mark the gaps
+                                     <- run this before trusting any diff
+
 tail.py SAVE.sav                     locate the property store, count records
 tail.py A.sav B.sav                  diff the property store by hash  <- start here
 

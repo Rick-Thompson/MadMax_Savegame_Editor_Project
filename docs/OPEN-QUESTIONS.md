@@ -7,28 +7,102 @@ out, so nobody repeats the dead ends in [FINDINGS.md](FINDINGS.md).
 
 ## 1. Can a convoy be made to respawn?
 
-**Status: four probes failed. Every byte in the file that parses is accounted
-for.** See [FINDINGS.md](FINDINGS.md) for the full record.
+**Status: six probes failed.** See [FINDINGS.md](FINDINGS.md) for the full
+record. What follows is the current state of the search, not a conclusion.
 
-Two leads remain.
+Everything tried so far, all length-preserving, all confirmed to load:
 
-**1a. The unparsed gap.** Between the end of the roster table and the start of
-the property store there are roughly 6 KB that do not parse as either a record
-stream or a table. In one sample that is `0x11194`..`0x1AD88`. A support car
-left over from the fight persisted across probes 2 and 3 with its blown tyre
-intact, so live world entities are stored *somewhere*, and this gap is the last
-candidate. Nothing is known about its structure yet.
+| # | edit | result |
+|---|---|---|
+| 1 | roster state -> `3.0` | convoy still cleared |
+| 2 | roster + the 9 kill markers removed | still cleared |
+| 3 | roster + all 22 encounter markers removed | still cleared |
+| 4 | roster + table-2 position row zeroed | still cleared |
+| 5 | roster + position + 13 vehicle records set to `1` | still cleared |
+| 6 | roster + position + 13 vehicle records orphaned | still cleared |
 
-**1b. The executable.** If convoy availability is computed at load time from
-region or territory progression rather than read from the save, no save edit
-will ever work. Testing this needs static analysis of the game binary rather
-than more save diffing. Finding the code that reads the roster's type-53 entries
-would settle the question in either direction.
+### The reason none of that was ever going to be conclusive
 
-A cheap experiment that has not been run: check whether a convoy that has been
-*seen but not engaged* differs from one never encountered, using the property
-store. The route appearing on the map added 559 property records in one
-snapshot. If any of those are per-convoy, that is the availability flag.
+**Thirty percent of the payload had never been parsed.** An earlier draft of
+this file said the gap after the roster table was "roughly 6 KB". It is
+**39,892 bytes**, and there is a second unmapped region of **18,025 bytes**
+after the property store. Together that is 58 KB of a 195 KB payload. The claim
+that every byte was accounted for was wrong, and it was wrong in the direction
+that made the convoy look unsolvable.
+
+### 1a. Region A - the live entity arena
+
+`0x011194`..`0x01AD68` in one sample, between the roster table and the property
+store. Structure so far:
+
+- a 32-byte header, magic **`0xF9715A12`**, same shape as the property-store
+  header: magic, arena size (30376), reserve, `0`, `8`, size
+- **547 slots marked by `0xDEADBEEF`**, at fixed strides (44, 52, 96, 192, 244,
+  288, 384 bytes). The count is 547 in every frame examined, so it is a fixed
+  pool, not a growing list
+- each slot carries a hash, a type word, and a world position as three floats
+- at `+0x76B8` a second sub-structure with its own counters, one of which moved
+  by exactly `+21` at the convoy kill - matching the 21 property records added
+- from `+0x7900`, a sorted ascending hash array where insertions shift every
+  later entry. This churns during ordinary driving too (16-22 inserts between
+  control saves), so it is a general registry rather than convoy state
+
+This is where the support car with the shot-out tyre lives - the thing that
+survived probes 2 and 3 intact.
+
+**Two isolated words changed here at the kill and nowhere else:**
+
+| offset from region start | 033 (alive) | 034 (dead) |
+|---|---|---|
+| `+0x00` | `0` | `1` |
+| `+0x10` | `0` | `F7F4A073` |
+
+`F7F4A073` is not a property-store hash, not a roster key and not a marker key.
+It already existed once in region A before the kill, 144 bytes away from the
+slot it was written into, so the kill *copied a reference* into a header field
+rather than inventing a value. The same pattern shows at `+0x76B8`
+(`0` -> `010E69A2`) and `+0x7700` (`9` -> `0404BC01`), each also a duplicate of
+a value 144 bytes away.
+
+Something in region A has a 144-byte stride. Working that out is the next
+concrete task, and it is pure analysis - no game time needed.
+
+### 1b. Region B
+
+`0x02B4AF`..`0x02FB18`, 18 KB after the property store. This one is not
+mysterious: it is ordinary `(u32 id, u32 size, value)` streams with sequential
+ids, and `resource.py` already reads one of them (scrap is id 42). It has never
+been diffed across the convoy frames.
+
+### 1c. The experiment that would settle it
+
+Every probe so far has guessed at what "not resolved" looks like. There is a way
+to *measure* it instead.
+
+From the Steam forums, and consistent with everything here: shoot or harpoon a
+wheel off the lead truck to **disable it without destroying it**, then leave.
+The whole convoy respawns. Same poster: leave one scrap pile in a camp and the
+camp repopulates.
+
+So capture that state.
+
+1. Find a live convoy, save - **A: untouched**
+2. Blow a wheel off the lead truck, kill nothing else, save - **B: disabled**
+3. Drive away until it despawns, save - **C: disabled, unloaded**
+4. Return later once it has respawned, save - **D: respawned**
+5. On a different convoy, destroy the leader outright, save - **E: destroyed**
+
+`B`/`C` versus `E` is a controlled A/B on the one variable that matters:
+same fight, same damage, one will come back and one will not. Whatever differs
+between them is the answer, and `D` confirms the direction. No amount of blind
+editing substitutes for this.
+
+### 1d. The executable
+
+If convoy availability is computed at load time from region or territory
+progression rather than read from the save, no save edit will ever work. That
+would still be an answer. Finding the code that reads the roster's type-53
+entries would settle it, but it needs static analysis rather than more diffing.
 
 ## 2. The integrity value at offset 0
 

@@ -149,34 +149,50 @@ half that describes the encounter instance.
 
 ---
 
-## 5. Conclusion so far
+## 5. Where it stands
 
-**Per-convoy persistent state, as currently known:**
+Six probes, all length-preserving, all confirmed to load, all failed:
 
-| structure | what it holds | tried? |
+| # | edit | result |
 |---|---|---|
-| `roster[key].state` | `3.0` alive / `0.0` destroyed | yes - probes 1-3, not sufficient |
-| table 2 position row | live telemetry, frozen at the wreck | yes - probe 4, not sufficient |
-| **property store, 13 vehicle records** | absent / `1` / `FF01` per vehicle | **probes A and B, pending** |
+| 1 | roster state -> `3.0` | convoy still cleared |
+| 2 | roster + the 9 kill markers removed | still cleared |
+| 3 | roster + all 22 encounter markers removed | still cleared |
+| 4 | roster + table-2 position row zeroed | still cleared |
+| 5 | roster + position + 13 vehicle records set to `1` | still cleared |
+| 6 | roster + position + 13 vehicle records orphaned | still cleared |
 
-Probe 4 (roster restored **and** position row zeroed, so that the save matches a
-never-spawned convoy in both places) was built and loaded: **the convoy stayed
-cleared.** That rules out the position row as the gate and leaves the vehicle
-ledger as the live lead.
+Probes 5 and 6 were built on the vehicle ledger above. Setting the thirteen
+records to "alive" and erasing them so the convoy reads as never-spawned both
+left the convoy cleared, so the ledger records the encounter without governing
+it - the same relationship the roster and the marker table already had.
 
-The two pending probes are both length-preserving, so neither risks the
-checksum:
+### The claim that was wrong
 
-- **Probe A** - roster `3.0`, position zeroed, thirteen ledger records set back
-  to `1`. Says "the convoy is alive and so are its vehicles".
-- **Probe B** - same, but the thirteen records are *orphaned* (their hashes
-  rewritten so nothing can look them up), reproducing the pre-spawn state where
-  the records simply do not exist. This is the closer match to frame 031.
+An earlier version of this document said "every byte that parses has now been
+accounted for". That was false. **Thirty percent of the payload had never been
+parsed at all**: 39,892 bytes between the roster table and the property store,
+and 18,025 bytes after it. The gap had been described as "roughly 6 KB" from a
+guess that was never checked against the actual offsets.
 
-If both fail, the remaining reading is that spawn gating is computed from
-region/territory progression at load time rather than read from the save, in
-which case no save edit brings a convoy back. That would be a real answer too,
-and it is written up in [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md).
+The pattern is worth naming, because it produced probes 4, 5 and 6. Each new
+structure found was assumed to be the last one, so a failed probe read as
+evidence that the answer was not in the save - when it was really evidence that
+the map was incomplete. Six probes is the cost of that assumption.
+
+The larger region is now partly mapped and is described in
+[OPEN-QUESTIONS.md](OPEN-QUESTIONS.md#1a-region-a---the-live-entity-arena): a
+fixed pool of 547 `0xDEADBEEF`-marked entity slots carrying hashes, types and
+world positions, plus a sorted hash registry. Two isolated header words in it
+change at the kill and nowhere else.
+
+### What should happen next
+
+Not another probe. The forum account of convoys respawning when the lead truck
+is *disabled rather than destroyed* means the "will respawn" state is reachable
+in normal play, so it can be captured and diffed instead of guessed at. The
+capture protocol is in
+[OPEN-QUESTIONS.md](OPEN-QUESTIONS.md#1c-the-experiment-that-would-settle-it).
 
 ---
 
