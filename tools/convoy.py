@@ -15,6 +15,24 @@ moving position is the convoy whose roster state later drops to 0.0.
 
   convoy.py list SAVE.sav
   convoy.py revive IN.sav OUT.sav --roster 593B2B20 [--misc 194895AE] [--slot N]
+  convoy.py reset  IN.sav OUT.sav [--slot N]      reset ALL convoys to unmet
+
+The authoritative record is none of the above three: it is the 32-byte blob the
+property store keys by each convoy's **CConvoyDataContainer objectid**, taken
+from global/convoys.blo (see docs/GAME-FILES.md).
+
+    f32 x4  orientation      f32 x3  position      u32 state
+
+    state 0  never encountered
+    state 2  active
+    state 3  wrecked
+
+Verified two ways: in a snapshot series the fought convoy walks 0 -> 2 -> 3
+while the other thirteen stay at 0, and in an unrelated 100% save thirteen of
+the fourteen containers read state 3 with a wreck position each.
+
+`reset` puts every convoy back to unmet - roster state to 3.0, the table-2
+position row to zero, and the container record to 32 zero bytes.
 """
 import os, struct, sys, importlib.util
 HERE=os.path.dirname(os.path.abspath(__file__))
@@ -24,6 +42,12 @@ def _l(n):
 m=_l('madmax_save.py'); se=_l('sec2edit.py')
 
 ALIVE=3.0
+
+# CConvoyDataContainer objectids, read out of global/convoys.blo with rtpc.py.
+# Static game data, identical in every playthrough - all fourteen appear as
+# property-store keys in every save examined.
+CONTAINERS=[0x7E90E3F6,0x38A45D73,0x8F1728CD,0x59501178,0x7D6BB232,0x132E3492,0x42D456AE,
+            0x7C5903DF,0x6FDA7EF0,0x337019D7,0x1FA21EA1,0xB6418D01,0x74C87945,0x35762FBA]
 
 def view(path):
     d,h,head,s2=se.split(path); ts=se.tables(s2); r=se.roles(ts)
@@ -61,9 +85,50 @@ def cmd_revive(inp,out,rk,mk,slot):
                sets=[(a,"%08X"%b,c.hex()) for a,b,c in sets])
     for a,b,c in sets: print("set %s %08X -> %s"%(a,b,c.hex(' ')))
 
+def cmd_reset(inp,out,slot):
+    import tempfile
+    te=_l('tailedit.py')
+    d,h,head,s2=se.split(inp); ts=se.tables(s2); r=se.roles(ts)
+    sets=[]
+    n53=0
+    for e in ts[r['roster']]['ents']:
+        if struct.unpack_from('<I',e,8)[0]!=53: continue
+        if struct.unpack_from('<f',e,12)[0]==ALIVE: continue
+        new=bytearray(e); struct.pack_into('<f',new,12,ALIVE)
+        sets.append(('roster',"%08X"%struct.unpack_from('<I',e,0)[0],bytes(new).hex())); n53+=1
+    nmisc=0
+    for e in ts[r['misc']]['ents']:
+        if not any(e[8:32]): continue
+        new=bytearray(e); new[8:32]=b'\0'*24
+        sets.append(('misc',"%08X"%struct.unpack_from('<I',e,0)[0],bytes(new).hex())); nmisc+=1
+    tmp=tempfile.mktemp(suffix='.sav')
+    se.rebuild(inp,tmp,[],[],slot=slot,sets=sets)
+    print("  roster: %d convoys set to %.1f ; table 2: %d position rows cleared"%(n53,ALIVE,nmisc))
+    # now the container records, in place, same length
+    orig=m.load(inp)
+    d2,recs=te.records(tmp); d2=bytearray(d2)
+    by={rr[3]:rr for rr in recs}
+    n=0
+    for k in CONTAINERS:
+        rr=by.get(k)
+        if rr is None: continue
+        off,idx,rl,hh,vl,v=rr
+        if vl!=32: print("  warning: %08X is %d bytes, expected 32 - skipped"%(k,vl)); continue
+        if not any(v): continue
+        d2[off+24:off+24+32]=b'\0'*32; n+=1
+    print("  property store: %d container records zeroed"%n)
+    body=bytes(d2)
+    if len(body)!=len(orig): sys.exit("length changed - refusing")
+    m.save(out, m.reseal(body, m.delta_of(orig)))
+    os.remove(tmp)
+    print("  wrote %s (%d bytes)"%(out,len(body)))
+
 if __name__=='__main__':
     a=sys.argv[1:]
     if a[0]=='list': cmd_list(a[1])
+    elif a[0]=='reset':
+        s=(int(a[a.index('--slot')+1]) if '--slot' in a else None)
+        cmd_reset(a[1],a[2],s)
     elif a[0]=='revive':
         inp,out=a[1],a[2]
         g=lambda n:(int(a[a.index(n)+1],16) if n in a else None)

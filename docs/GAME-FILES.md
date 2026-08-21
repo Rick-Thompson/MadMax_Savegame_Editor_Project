@@ -278,3 +278,28 @@ project treated the two as equivalent for six probes.
 
 Probe 7 restores the roster to `3.0`, zeroes the table-2 position row, and sets
 `7D6BB232` back to thirty-two zero bytes - a convoy that has never been met.
+
+### The 100% save agrees
+
+Independent confirmation from the reference ladder, a different playthrough
+entirely. In PT6 - everything cleared, all thirteen type-53 roster entries at
+`0.0` - the container records read:
+
+```
+13 containers   state 3   each with its own wreck position
+ 1 container    state 2   no position
+```
+
+Thirteen wrecked convoys, thirteen roster entries at zero. The fourteenth
+container sits at state `2` with a zero position in a fully completed save, so
+it is a spare or an unused route rather than a fourteenth convoy.
+
+`convoy.py reset` puts a whole save back to unmet - every type-53 roster entry
+to `3.0`, every table-2 position row cleared, every container record zeroed.
+Run against PT6 it reports:
+
+```
+roster: 13 convoys set to 3.0 ; table 2: 13 position rows cleared
+property store: 14 container records zeroed
+payload 521552 -> 521552 ; file 1043456 -> 1043456 (unchanged - delta valid)
+```
