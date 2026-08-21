@@ -17,11 +17,20 @@ and that null result was nearly misread as "the strings must be somewhere else"
 - the wrong function and the wrong corpus produce the same symptom, so pin the
 function first.
 
-Documented in two independent places:
+Documented in three places, one of them Mad Max's own toolkit:
 
-- [Gibbed.JustCause3](https://github.com/gibbed/Gibbed.JustCause3) -
-  `StringHelpers.HashJenkins`
+- **[Gibbed.MadMax](https://github.com/gibbed/Gibbed.MadMax)** -
+  `Gibbed.MadMax.FileFormats/StringHelpers.cs`. Rick Gibbed's 2017 toolkit for
+  this exact game. Its `HashJenkins` is lookup3, despite the bare name.
+- [Gibbed.JustCause3](https://github.com/gibbed/Gibbed.JustCause3) - same function
 - [kk49/DECA](https://github.com/kk49/deca) - `deca/hashes.py`, `hash32_func`
+
+Two independent check values from DECA reproduce exactly:
+
+```
+lookup3("_class")      = 1473B179
+lookup3("_class_hash") = D04059E6
+```
 
 `tools/names.py` implements it and is checked against the canonical `lookup3.c`
 test vectors:
@@ -39,68 +48,88 @@ Avalanche also use 48- and 64-bit hashes (murmur3-128, upper or lower slice) for
 other purposes. The property store holds a few keys above `2^32` which may be
 those, or may be object ids rather than name hashes.
 
-## What is named so far
+## Where the hash is actually used: the archives
 
-One record, out of 3811 hashes across every keyed structure in a mid-game save:
+**The `.tab` archive index is keyed by `lookup3(basename)`** - the file's name
+only, not its path. This is worth stating precisely because the difference is
+stark:
+
+| what is hashed | entries matched, out of 44,149 |
+|---|---|
+| full path (`graphs/convoys/convoy_choreographer.gsrc`) | 1 |
+| path, lowercased | 1 |
+| path with backslashes | 1 |
+| **basename (`convoy_choreographer.gsrc`)** | **24,732** |
+
+`tools/arcx.py` uses this to pull any file out of the game by name.
+
+## Where it is *not* used: the save
+
+**The save's keys are not lookup3 of any known name.** Tested against 101,426
+candidates built from Gibbed's `master.dirlist` (27,501 real game paths, plus
+basenames, stems and path tokens) and the class field namelists:
+
+| structure | keys | named |
+|---|---|---|
+| table 0 live | 25 / 196 | 0 |
+| table 1 markers | 14 / 832 | 0 |
+| table 2 convoys | 13 | 0 |
+| table 3 roster | 1520 | 0 |
+| property store | 706 / 10706 | 0 |
+
+Zero, in both the 0% and the 100% reference save. An independent run by another
+model reached the same result from a different candidate set (58,995 strings),
+and additionally swept Jenkins seeds 0-255 and tried FNV-1a, DJB2, SDBM, CRC-32
+and Murmur3. Also zero.
+
+### A retracted result
+
+An earlier version of this file reported one name recovered:
 
 ```
 E9BB5FD1  CPlayer
 ```
 
-Corroborating detail: that record is 576 bytes, its value starts
-`04 00 00 00 | 40 02 00 00 | 3a 00 00 00 | 3a 00 00 00 | d1 5f bb e9`, where
-`0x240` is 576 - the record's own length - and the fifth word is the record's
-own key. It is the only record in the store that embeds its key in its value.
-It changes whenever the player moves. A 576-byte per-player blob called
-`CPlayer` is exactly what it looks like.
+found by hashing 398,623 strings out of the game binaries. **Treat it as
+withdrawn.** With a 583k-entry dictionary against 2178 keys, ~0.3 random
+collisions are expected, so a single hit was never evidence - and now that a
+much better corpus of 101,426 *real* game names produces exactly zero matches
+across every keyed structure, the most likely reading is that the one hit was
+the expected coincidence.
 
-**Treat it as strongly indicated rather than proven.** With a 583k-entry
-dictionary against 2178 store keys, roughly 0.3 random collisions are expected,
-so a single hit is not by itself evidence. The embedded key does not settle it
-either - the game wrote both the key and the tag, so they would agree whether or
-not the name is right. What makes it convincing is that the name, the size, the
-contents and the change pattern all describe the same object.
+The supporting detail was weaker than it looked, too. That record does embed
+its own key in its value, but the game wrote both fields, so they agree whether
+or not the name is right. The record is still obviously the player object - 576
+bytes, changes when you move. Its *name* is unknown.
 
-## Why only one
+So **"hash-named property store" is an assumption, not a finding.** The keys may
+be a different hash, a hash of some string form not present in the file lists,
+or engine-assigned object ids that were never names at all. Settling it probably
+needs the disassembler that would also settle the integrity value.
 
-The dictionary is built from the wrong corpus. `names.py harvest` reads the
-executable and the gameplay DLLs - 398,623 unique identifier-looking strings -
-plus whatever sits in plaintext inside the archives. That yields C++ symbol
-names and debug strings, but the gameplay identifiers live in the archives, and
-those are compressed.
+## What the binaries do contain
 
-Sampled 100 MB from the head of six `game*.arc` files:
+`names.py harvest` reads the executable and the gameplay DLLs - 398,623 unique
+identifier-looking strings - plus whatever sits in plaintext inside the
+archives. Useful as a corpus, but it did not crack the save keys.
 
-| archive | NUL-delimited identifier strings |
-|---|---|
-| game0 | 13289 |
-| game2, game6, game10 | 0 |
-| game4 | 1 |
-| game8 | 2 |
 
-`game0.arc` is the audio archive and its event names are plaintext
-(`camp_1410_sca6_max_escaping_camp_03`, `sm1030_conv02_10_chum`). Everything
-else is opaque. Roughly 34 GB of archives would yield almost nothing more
-without decompressing them.
-
-One harvesting note worth keeping: inside an archive, only take strings with a
+One harvesting note worth keeping: inside an archive, take only strings with a
 NUL on **both** sides. Compressed data throws off enormous numbers of
 identifier-shaped byte runs - 863 MB of `game0.arc` gives 2.4 million junk
 matches under a plain identifier regex and 6752 real ones under the
-NUL-delimited one.
+NUL-delimited one. In practice this is now moot: `arcx.py` extracts real files,
+which beats scraping compressed bytes.
 
-## The next step
+## Next
 
-Decompress the archives and harvest from the real game data. The `.tab`/`.arc`
-pair is a standard Avalanche archive and the entries are AAF-compressed;
-[DECA](https://github.com/kk49/deca) and the
-[apex-resource-index](https://github.com/EonZeNx/apex-resource-index) tooling
-handle this for Just Cause 3/4, and Mad Max is close enough in vintage to be
-worth trying. RTPC blobs inside those archives carry `u32 nameHash` keys and
-string values, so they are both a naming corpus and a second confirmation of the
-hash function.
+The save-key scheme is open. Ways in, roughly in order of cost:
 
-If that works, the whole project changes character. Naming the roster's 1520
-keys turns the object type map from "type 45 is something destructible" into
-labels, and naming the property store makes the convoy search a matter of
-reading field names instead of diffing.
+1. Extract and read `player_stats_gameplay_loadsave.xvmc` and the other
+   `*_loadsave.xvmc` scripts (`arcx.py get` pulls them; they are XVM bytecode
+   and `Gibbed.MadMax.XvmDisassemble` reads them). They are literally the game's
+   save/load logic.
+2. Convert the ADF files with `Gibbed.MadMax.ConvertAdf` - ADF carries a
+   string-hash table, which is a naming corpus *and* a second confirmation of
+   the hash.
+3. Disassemble the executable around the save writer.

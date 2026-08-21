@@ -16,6 +16,9 @@ madmax_save.py rdiff A.sav B.sav     diff section-1 records by id
 madmax_save.py peek / decode         raw access to the decoded payload
 
 sec2.py A.sav B.sav                  map and diff the four section-2 tables
+arcx.py find ARCHIVEDIR NAME ...     locate a game file in the .tab/.arc set
+arcx.py get ARCHIVEDIR OUTDIR NAME   extract it (raw deflate, no .NET needed)
+
 names.py harvest OUT.txt FILE ...    pull candidate strings out of game binaries
 names.py build STRINGS.txt OUT.tsv   hash them (Jenkins lookup3) -> hash<TAB>name
 names.py match OUT.tsv SAVE.sav      report which of a save's hashes are named

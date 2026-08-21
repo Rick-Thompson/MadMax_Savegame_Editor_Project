@@ -27,7 +27,8 @@ reproducible from the sample saves in `data/`.
 | diff the hash-named property store | `tail.py` | yes |
 | edit a property record in place | `tailedit.py` | yes |
 | map a payload and show the gaps | `mapsave.py` | yes |
-| recover names for the hashes | `names.py` | partly |
+| recover names for the hashes | `names.py` | see HASHES.md |
+| extract files from the game archives | `arcx.py` | yes |
 | restore a destroyed scarecrow, sniper tower, etc. | `mmworld.py --restore-type` | **yes, in game** |
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
 | set scrap | `resource.py set 42=N` | **yes, in game** |
@@ -77,10 +78,12 @@ docs/
   METHODOLOGY.md          how to run a save-diff experiment without fooling yourself
   OPEN-QUESTIONS.md       what is still unsolved, and what to try next
   OBJECT-TYPES.md         the 1520-entry object roster, per-type counts
-  HASHES.md               the name hash, and how to recover names from game files
+  HASHES.md               the name hash - where it applies, and where it does not
+  GAME-FILES.md           reading the game's own archives, and what they confirm
 tools/                    the Python utilities (see tools/README.md)
 data/
   ladder/                 PT1-PT6, a 0% -> 100% reference ladder
+  gibbed/                 Gibbed.MadMax's file list, 27501 game paths
   samples/                a snapshot series spanning one convoy fight
   field-map.csv           222 record ids that move across the ladder
 experiments/              log of every in-game experiment and its result
@@ -107,21 +110,24 @@ length-preserving edit. Full detail in [docs/FORMAT.md](docs/FORMAT.md).
 
 The most useful things anyone could add:
 
-1. **A name dictionary.** Every key in a save is a Jenkins `lookup3` hash of a
-   name, and exactly one of them is currently named. The names live in the
-   compressed `.arc` archives. Decompressing those and harvesting the strings
-   would turn most of this project from diffing into reading - see
-   [docs/HASHES.md](docs/HASHES.md). This is the highest-leverage thing on the
-   list by a wide margin.
-2. **A convoy respawn.** Six probes have failed, and 30% of the payload is still
+1. **Read the convoy graph scripts.** `tools/arcx.py` extracts
+   `graphs/convoys/convoy_spawner_mapicon_handler.gsrc` and friends from the
+   game archives. They are ADF-encoded node graphs and decide the thing six save
+   probes could not - see [docs/GAME-FILES.md](docs/GAME-FILES.md). An ADF
+   reader is all that stands in the way.
+2. **The save's key scheme.** Every key in a save is a hash of *something*, and
+   nothing in 101,426 real game names matches under `lookup3` or five other
+   functions. See [docs/HASHES.md](docs/HASHES.md).
+3. **A convoy respawn.** Six probes have failed, and 30% of the payload is still
    unmapped. `docs/OPEN-QUESTIONS.md` has the capture protocol that would
    measure the answer instead of guessing at it.
-3. **A closed-form solution to the integrity value.** The delta-carry workaround
+4. **A closed-form solution to the integrity value.** The delta-carry workaround
    means edits must preserve file length. Solving it properly would lift that.
-4. **Object type labels.** Types 5, 10, 11, 12, 17, 26, 37, 40, 41, 69 are
-   unidentified. Labelling one takes about two minutes: destroy one thing in
+5. **Object type labels.** Types 52 and 53 are now settled from the game's file
+   list, and scarecrows probably span 45-48 (see GAME-FILES.md). Types 5, 10,
+   11, 12, 17, 26, 37, 40, 41, 69 are still unidentified. Labelling one takes about two minutes: destroy one thing in
    game, save, and diff.
-5. **Windows / other-platform confirmation.** Everything here was worked out on
+6. **Windows / other-platform confirmation.** Everything here was worked out on
    Linux under Proton plus four older Windows saves.
 
 Please include the before/after saves with any finding. Half the wrong turns
