@@ -221,3 +221,60 @@ That corrects a note in this repo's earlier write-up, which described the
 034 -> 036 transition as "the artifact pickup" - it was not. And it kills the
 hypothesis: that convoy was wrecked with its relic still uncollected, and it
 still did not respawn after six probes. Relic state is not the gate.
+
+## global/convoys.bl - and the record six probes missed
+
+`global/convoys.bl` is a **SARC** container (`tools/sarc.py`). Inside it, among
+the convoy graphs and effects, sits `global/convoys.blo` - an **RTPC** file
+(`tools/rtpc.py`), the Runtime Property Container format from the
+[apex-resource-index](https://github.com/EonZeNx/apex-resource-index) patterns.
+
+It decodes to 263 entities with literal names, and the class census is:
+
+```
+97 SGameObjectOrderedListEntry   28 CGraphScriptGameObject   14 CMapIcon
+97 CNamedPoint                   28 CGameObjectOrderedList   14 CConvoyDataContainer
+60 SEventTriggerComponent        14 CRoadPathCache           13 CTeleport
+56 CTransformObject              14 CRoadMover               10 CScriptGameObject
+50 CEventTrigger                 14 CEffectPointEmitter       1 CTimeTrigger
+```
+
+Every entity carries a `save` property. **Exactly 28 have `save = 1`**: the 14
+`CConvoyDataContainer`s and the 14 `CMapIcon`s. Nothing else about a convoy is
+persisted.
+
+Each container also carries an **`objectid`** - and *all fourteen of those
+objectids are keys in the save's property store*. Fourteen out of fourteen.
+That is the bridge between the game data and the save file.
+
+### The convoy state record
+
+The record each objectid keys is 32 bytes:
+
+```
+f32 x4    orientation quaternion
+f32 x3    position
+u32       state
+```
+
+Across the snapshot series, for the convoy the player fought:
+
+| frame | state | position |
+|---|---|---|
+| 031 before the route appeared | **0** | zero |
+| 033 engaged, leader alive | **2** | zero |
+| 034 leader killed | **3** | the wreck site |
+| 037 later | **3** | the wreck site |
+
+All thirteen other containers sit at state `0` with a zero position throughout.
+So the encoding is `0` never encountered, `2` active, `3` wrecked - and
+`ConvoyDataGetWrecked` in the choreographer reads exactly this.
+
+**This is the record that governs the convoy, and no probe had touched it.**
+It was in the diffs the whole time, keyed `7D6BB232`, and it was dismissed as
+churn because it also moves during ordinary play - which of course it does, it
+is a live position. Being noisy is not the same as being derived, and this
+project treated the two as equivalent for six probes.
+
+Probe 7 restores the roster to `3.0`, zeroes the table-2 position row, and sets
+`7D6BB232` back to thirty-two zero bytes - a convoy that has never been met.

@@ -30,6 +30,8 @@ reproducible from the sample saves in `data/`.
 | recover names for the hashes | `names.py` | see HASHES.md |
 | extract files from the game archives | `arcx.py` | yes |
 | decode ADF files and graph scripts | `adf.py` | yes |
+| read SARC bundles (.bl) | `sarc.py` | yes |
+| read RTPC entity data (.blo) | `rtpc.py` | yes |
 | disassemble XVM gameplay scripts | `xvm.py` | yes |
 | restore a destroyed scarecrow, sniper tower, etc. | `mmworld.py --restore-type` | **yes, in game** |
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
