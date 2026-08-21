@@ -29,6 +29,7 @@ reproducible from the sample saves in `data/`.
 | map a payload and show the gaps | `mapsave.py` | yes |
 | recover names for the hashes | `names.py` | see HASHES.md |
 | extract files from the game archives | `arcx.py` | yes |
+| decode ADF files and graph scripts | `adf.py` | yes |
 | restore a destroyed scarecrow, sniper tower, etc. | `mmworld.py --restore-type` | **yes, in game** |
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
 | set scrap | `resource.py set 42=N` | **yes, in game** |
@@ -110,11 +111,10 @@ length-preserving edit. Full detail in [docs/FORMAT.md](docs/FORMAT.md).
 
 The most useful things anyone could add:
 
-1. **Read the convoy graph scripts.** `tools/arcx.py` extracts
-   `graphs/convoys/convoy_spawner_mapicon_handler.gsrc` and friends from the
-   game archives. They are ADF-encoded node graphs and decide the thing six save
-   probes could not - see [docs/GAME-FILES.md](docs/GAME-FILES.md). An ADF
-   reader is all that stands in the way.
+1. **Follow the convoy graph scripts.** `arcx.py` extracts them and `adf.py`
+   decodes them into named node graphs - see
+   [docs/GAME-FILES.md](docs/GAME-FILES.md). The spawner turned out to be just
+   the map icon; `convoy_choreographer.gsrc` and the spawning graphs are next.
 2. **The save's key scheme.** Every key in a save is a hash of *something*, and
    nothing in 101,426 real game names matches under `lookup3` or five other
    functions. See [docs/HASHES.md](docs/HASHES.md).

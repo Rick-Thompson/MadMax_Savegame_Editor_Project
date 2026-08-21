@@ -16,6 +16,9 @@ madmax_save.py rdiff A.sav B.sav     diff section-1 records by id
 madmax_save.py peek / decode         raw access to the decoded payload
 
 sec2.py A.sav B.sav                  map and diff the four section-2 tables
+adf.py typelib MADMAX.EXE OUTDIR     pull the type library out of the executable
+adf.py dump FILE --names D.tsv --lib L...   decode a .gsrc/.adf into a tree
+
 arcx.py find ARCHIVEDIR NAME ...     locate a game file in the .tab/.arc set
 arcx.py get ARCHIVEDIR OUTDIR NAME   extract it (raw deflate, no .NET needed)
 

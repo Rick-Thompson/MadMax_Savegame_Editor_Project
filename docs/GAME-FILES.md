@@ -79,14 +79,78 @@ graphs/convoys/hood_ornament_unload_update_map_icon.gsrc
 scripts/gameobjects/player_stats_gameplay_loadsave.xvmc
 ```
 
-All extract cleanly with `arcx.py`. They are ADF-encoded node graphs, so the
-strings alone are thin - `convoy_wreck_handler.gsrc` yields `ConvoyData`,
-`WRECK`, `STARTED`, `wrecked`, `Desapwned` (their typo) and
-`savemanager_autosave`, which is suggestive but not a mechanism. Reading the
-graph needs an ADF parser; `Gibbed.MadMax.ConvertAdf` is one, and the format is
-documented in `Gibbed.MadMax.FileFormats/AdfFile.cs`.
+All extract cleanly with `arcx.py`, and `tools/adf.py` now decodes them.
 
-`convoy_spawner_mapicon_handler.gsrc` is 6261 bytes and is where "already
-instantiated" versus "never spawned" gets decided. That makes it the most direct
-answer available to the question this project started with, and it needs no more
-in-game experiments to read.
+## Reading a graph script
+
+```
+adf.py typelib "<gamedir>/MadMax.exe" /tmp/typelib
+adf.py dump convoy_wreck_handler.gsrc --names dict.tsv --lib /tmp/typelib/*.adf
+```
+
+Output is the real node graph:
+
+```
+GraphScript : GSGraph
+  Nodes : A[GSNode][16]
+    [0] : GSNode
+      Class = 2188805253 (=CheckVariable)
+      DataSet : GSDataSet
+        Data : A[GSData][2]
+          [0]: Operator = 16
+        DataSets : A[GSDataSet][3]
+          [0] Name = 3584055701 (=input_pins)
+          [1] Name = 3048499994 (=output_pins)
+              [0] Name = 706834940 (=true)
+              [1] Name = 3855993015 (=false)
+          [2] Name = 2681797045 (=variable_pins)
+```
+
+Three things had to be worked out that Gibbed's reader does not cover:
+
+**The type library is inside `MadMax.exe`, not the archives.** A `.gsrc`
+declares *zero* types and refers to them by hash. Nothing in the 27,501-path
+file list is a type library, and no `.adf` extension exists at all. The
+definitions are 40 ADF blobs compiled into the executable - 302 types between
+them, including `GSGraph` (`63B4A6F9`), the root type of every graph script.
+`adf.py typelib` pulls them out.
+
+**Primitive types are implicit and follow a naming rule.** Gibbed hard-codes
+four hashes with the names as comments (`uint8011`, `uint16022`, `uint32044`,
+`uint64088`). Those are `lookup3(name + type + size + alignment)`, which
+reproduces all four exactly and yields the rest for free - `int8011`,
+`float044`, `double088`, `String588`.
+
+**Enum type definitions carry members.** Gibbed's reader throws on anything but
+Structure and Array, which is why one blob in the executable fails to load with
+it. Enum entries are 12 bytes: `s64 nameIndex, s32 value`.
+
+Also worth knowing: every offset inside an instance - including array offsets -
+is relative to the instance start, not to the file.
+
+## Everything in a graph is a hash, and the hashes resolve
+
+Node classes, pin names and value types are all `lookup3` names, and the
+dictionary from `names.py` resolves them. So the hash function *is* used
+throughout the game data - it is specifically the save's keys that do not
+follow it.
+
+`convoy_wreck_handler.gsrc` decodes to 1868 lines and this node inventory:
+
+| count | node class |
+|---|---|
+| 4 | TransformGetPos, SleepFrame, ExternalGraph, CompareVariable |
+| 3 | ObjectGetTransform, ExternalVariableStringHash, ExternalVariableString |
+| 2 | TimeLock, SendGlobalEvent, **RelicIsCollected**, ExternalVariableObject, ExternalVariableInt, DistanceBetweenPoints, Debug, DatablockIntArraySize |
+| 1 | **GUIXSetConvoyRouteWrecked**, **GUIXSetConvoyRouteRelicCollected**, IsValidObject, GetPlayerCharacter, OrderedExecute, TransformRotateLocal, VariableObject, Return, Main |
+
+`GUIXSetConvoyRouteWrecked` and `RelicIsCollected` are the two states the game
+tracks per convoy route, and `DatablockIntArraySize` suggests the per-convoy
+data is an int array in a datablock rather than anything we have found in the
+save. That is the thread to pull next.
+
+`convoy_spawner_mapicon_handler.gsrc` turns out to be exactly what its name
+says - 16 nodes that position the map icon (`ObjectGetTransform`,
+`ObjectSetTransform`, `SendGlobalEvent`). The spawn *decision* is not in it, so
+the next files to read are `convoy_choreographer.gsrc` and whatever
+`graphs/spawning/spawn_ids_update_prio_on_range.gsrc` leads to.
