@@ -30,6 +30,7 @@ reproducible from the sample saves in `data/`.
 | recover names for the hashes | `names.py` | see HASHES.md |
 | extract files from the game archives | `arcx.py` | yes |
 | decode ADF files and graph scripts | `adf.py` | yes |
+| disassemble XVM gameplay scripts | `xvm.py` | yes |
 | restore a destroyed scarecrow, sniper tower, etc. | `mmworld.py --restore-type` | **yes, in game** |
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
 | set scrap | `resource.py set 42=N` | **yes, in game** |
@@ -81,6 +82,7 @@ docs/
   OBJECT-TYPES.md         the 1520-entry object roster, per-type counts
   HASHES.md               the name hash - where it applies, and where it does not
   GAME-FILES.md           reading the game's own archives, and what they confirm
+  SCRIPTS.md              the game's save/load script, disassembled
 tools/                    the Python utilities (see tools/README.md)
 data/
   ladder/                 PT1-PT6, a 0% -> 100% reference ladder

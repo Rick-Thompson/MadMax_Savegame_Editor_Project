@@ -230,6 +230,38 @@ def render(adf,lib,inst,maxdepth=64):
     walk(inst['type'],0,0,inst['name'] or "instance")
     return out
 
+def to_py(adf,lib,inst,maxdepth=64):
+    """Same walk as render(), but returns Python objects instead of text."""
+    d=adf.data[inst['offset']:inst['offset']+inst['size']]
+    def walk(th,o,depth=0):
+        if th in PRIM:
+            n,sz=PRIM[th]
+            fmt={('uint8',1):'<B',('int8',1):'<b',('uint16',2):'<H',('int16',2):'<h',
+                 ('uint32',4):'<I',('int32',4):'<i',('uint64',8):'<Q',('int64',8):'<q',
+                 ('float',4):'<f',('double',8):'<d'}[(n,sz)]
+            return struct.unpack_from(fmt,d,o)[0]
+        t=lib.get(th)
+        if t is None or depth>maxdepth: return None
+        k=t['type']
+        if k==STRUCTURE:
+            return {m['name']:walk(m['type'],o+m['offset'],depth+1) for m in t['members']}
+        if k==ARRAY:
+            aoff,acnt=struct.unpack_from('<qq',d,o)
+            if t['elem'] in PRIM:
+                n,esz=PRIM[t['elem']]
+                if n=='uint8': return bytes(d[aoff:aoff+acnt])
+                return [walk(t['elem'],aoff+i*esz,depth+1) for i in range(acnt)]
+            et=lib.get(t['elem'])
+            if not et: return []
+            return [walk(t['elem'],aoff+i*et['size'],depth+1) for i in range(acnt)]
+        if k==STRING:
+            soff,=struct.unpack_from('<q',d,o); e=d.index(b'\0',soff)
+            return d[soff:e].decode('latin1')
+        if k==STRINGHASH: return struct.unpack_from('<I',d,o)[0]
+        if k in (BITFIELD,ENUM): return int.from_bytes(d[o:o+(t['size'] or 4)],'little')
+        return None
+    return walk(inst['type'],0)
+
 def load_lib(paths):
     lib={}
     for p in paths:
