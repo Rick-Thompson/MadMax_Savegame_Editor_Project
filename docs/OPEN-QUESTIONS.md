@@ -53,8 +53,11 @@ in an afternoon.
 
 ## 3. Unlabelled object types
 
-Ten of the roster's type ids have no label: **5, 10, 11, 12, 17, 26, 37, 40, 41,
-69**. Types 11, 17, 26, 37 and 69 are never cleared even at 100% completion, so
+Types 49, 52 and 53 are now labelled (sniper, minefield, convoy) from the game's
+file list, and scarecrows probably span 45-48 - see
+[OBJECT-TYPES.md](OBJECT-TYPES.md).
+
+Ten type ids still have no label: **5, 10, 11, 12, 17, 26, 37, 40, 41, 69**. Types 11, 17, 26, 37 and 69 are never cleared even at 100% completion, so
 they are probably scenery or permanent structures. Types 5, 10, 12, 40 and 41
 are only partially cleared, which makes them the interesting ones.
 

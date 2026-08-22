@@ -22,6 +22,10 @@ xvm.py strings FILE.xvmc --lib L...  its debug strings
 sarc.py list|get FILE.bl [OUTDIR]     read a SARC bundle
 rtpc.py dump FILE.blo [--names D.tsv] read RTPC entity data
 
+run-crack.sh  driver for crack.cpp: builds it, then sweeps k=1, k=2 and k=3
+            across both GPUs. Only the k=1/k=2 output is usable - see
+            docs/HASHES.md for why k=3 is pure collision noise.
+
 crack.cpp   HIP lookup3 brute-forcer (gfx906) - recovers graph pin/class
             names; build: hipcc --offload-arch=gfx906 -O3 -o crack crack.cpp
             run:   ./crack <k> <start> <count>  (see docs/HASHES.md)
@@ -66,8 +70,16 @@ mmworld.py IN OUT --restore-all [--slot N]
 mmworld.py IN OUT --destroy-type 45 [--slot N]        for testing
 
 mmrestore.py IN OUT --obj <roster key> --marker <tracking key> [--slot N]
-convoy.py revive IN OUT --roster HEX [--misc HEX] [--slot N]
 resource.py set IN OUT 42=50000 [--slot N]
+
+convoy.py reset IN OUT [--slot N] [--state S]   restore ALL convoys
+                                     state 0 = present but undiscovered
+                                     state 2 = marked on the map and playable
+                                     state 3 = wrecked (what a kill writes)
+convoy.py revive IN OUT --roster HEX [--misc HEX] [--slot N]
+                                     legacy single-convoy roster+position edit.
+                                     Kept for reference: it does NOT restore a
+                                     convoy on its own - see docs/FORMAT.md 7.2.
 
 sec2edit.py IN OUT [--set T:KEY:HEX] [--add T:HEX] [--del T:KEY] [--slot N]
 madmax_save.py setrec IN OUT ID=HEX

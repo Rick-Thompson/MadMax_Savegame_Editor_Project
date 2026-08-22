@@ -48,13 +48,23 @@ reproducible from the sample saves in `data/`.
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
 | set scrap | `resource.py set 42=N` | **yes, in game** |
 | inspect the 13 convoys | `convoy.py list` | yes |
+| restore cleared convoys | `convoy.py reset --state 2` | **yes, in game** |
 
-## What does not work
+## What is still open
 
-Convoys do not come back. The roster value can be set back to "alive" and it
-sticks across later autosaves, but the encounter never respawns. Four separate
-probes have now failed, including one that covered every byte in the file that
-parses. See [docs/FINDINGS.md](docs/FINDINGS.md).
+The **save's key scheme**. Every key in a save is a hash of *something*, but
+nothing in 101,426 real game names matches under `lookup3` or five other
+functions, so the keys stay opaque - you can edit a record once you know what it
+governs, but you cannot look one up by name. See
+[docs/HASHES.md](docs/HASHES.md).
+
+The **integrity value** at offset 0 is not solved in closed form, so every edit
+must preserve file length. The delta-carry workaround makes that a non-issue in
+practice, and every tool here enforces it.
+
+**Roughly 30% of the payload still does not parse** - `mapsave.py` shows the
+gaps. Nothing needed for the edits above lives there, but it is where the next
+findings will come from.
 
 ---
 
@@ -92,6 +102,7 @@ docs/
   FINDINGS.md             the convoy investigation, including the failures
   METHODOLOGY.md          how to run a save-diff experiment without fooling yourself
   OPEN-QUESTIONS.md       what is still unsolved, and what to try next
+  GAME-FILES.md           the game's own archives - where the convoy answer came from
   OBJECT-TYPES.md         the 1520-entry object roster, per-type counts
   HASHES.md               the name hash - where it applies, and where it does not
   GAME-FILES.md           reading the game's own archives, and what they confirm
@@ -133,9 +144,12 @@ The most useful things anyone could add:
 2. **The save's key scheme.** Every key in a save is a hash of *something*, and
    nothing in 101,426 real game names matches under `lookup3` or five other
    functions. See [docs/HASHES.md](docs/HASHES.md).
-3. **A convoy respawn.** Six probes have failed, and 30% of the payload is still
-   unmapped. `docs/OPEN-QUESTIONS.md` has the capture protocol that would
-   measure the answer instead of guessing at it.
+3. **The other activity types.** Convoys are solved, and the method that solved
+   them is five repeatable steps (see
+   [docs/GAME-FILES.md](docs/GAME-FILES.md)): find the activity's `.bl` bundle,
+   unpack the SARC, decode the RTPC, take the `objectid`s of entities with
+   `save = 1`, look those up in the property store. Camps, minefields and sniper
+   towers have their own bundles and nobody has looked yet.
 4. **A closed-form solution to the integrity value.** The delta-carry workaround
    means edits must preserve file length. Solving it properly would lift that.
 5. **Object type labels.** Types 52 and 53 are now settled from the game's file

@@ -65,17 +65,25 @@ Additional facts established along the way:
 
 ## 3. The failed probes
 
+All six, in the order they were run. Every one was length-preserving and
+confirmed to load in game.
+
 | # | edit | result |
 |---|---|---|
 | 1 | roster restored to `3.0` | value sticks across later autosaves; convoy still gone |
 | 2 | roster + the 9 rows created by the kill deleted | still gone |
 | 3 | roster + all 22 rows from the whole encounter deleted | still gone |
 | 4 | roster + the table-2 position row zeroed | still gone |
+| 5 | roster + position + the 13 vehicle-ledger records set to `1` | still gone |
+| 6 | roster + position + the 13 vehicle-ledger records orphaned | still gone |
 
 Probe 4 was the interesting one, and it is the reason this document exists: it
-was designed after the property store was finally parsed correctly, and it
-covered the last structure in the file that had never been touched. It still
-failed.
+was designed after the property store was finally parsed correctly, and it was
+believed at the time to cover the last structure in the file that had never been
+touched. It still failed — and the belief was wrong. Two more structures were
+found afterwards, and the answer was in neither the roster nor the tables but in
+a property-store record keyed by an id that appears nowhere in the save. See
+[GAME-FILES.md](GAME-FILES.md).
 
 **Probes 2 and 3 also produced a second finding: the tracking table is derived
 state.** After probe 3 the game regenerated 18 of the 22 deleted rows on the
@@ -156,23 +164,12 @@ half that describes the encounter instance.
 
 ---
 
-## 5. Where it stands
-
-Six probes, all length-preserving, all confirmed to load, all failed:
-
-| # | edit | result |
-|---|---|---|
-| 1 | roster state -> `3.0` | convoy still cleared |
-| 2 | roster + the 9 kill markers removed | still cleared |
-| 3 | roster + all 22 encounter markers removed | still cleared |
-| 4 | roster + table-2 position row zeroed | still cleared |
-| 5 | roster + position + 13 vehicle records set to `1` | still cleared |
-| 6 | roster + position + 13 vehicle records orphaned | still cleared |
+## 5. How it was actually solved
 
 Probes 5 and 6 were built on the vehicle ledger above. Setting the thirteen
-records to "alive" and erasing them so the convoy reads as never-spawned both
-left the convoy cleared, so the ledger records the encounter without governing
-it - the same relationship the roster and the marker table already had.
+records to "alive", and erasing them so the convoy reads as never-spawned, both
+left the convoy cleared - so the ledger records the encounter without governing
+it, the same relationship the roster and the marker table already had.
 
 ### The claim that was wrong
 
@@ -187,19 +184,29 @@ structure found was assumed to be the last one, so a failed probe read as
 evidence that the answer was not in the save - when it was really evidence that
 the map was incomplete. Six probes is the cost of that assumption.
 
-The larger region is now partly mapped and is described in
-[OPEN-QUESTIONS.md](OPEN-QUESTIONS.md#1a-region-a---the-live-entity-arena): a
-fixed pool of 547 `0xDEADBEEF`-marked entity slots carrying hashes, types and
-world positions, plus a sorted hash registry. Two isolated header words in it
-change at the kill and nowhere else.
+### What broke the deadlock
 
-### What should happen next
+Not more save diffing. The answer came from the **game files**, not the save:
 
-Not another probe. The forum account of convoys respawning when the lead truck
-is *disabled rather than destroyed* means the "will respawn" state is reachable
-in normal play, so it can be captured and diffed instead of guessed at. The
-capture protocol is in
-[OPEN-QUESTIONS.md](OPEN-QUESTIONS.md#1c-the-experiment-that-would-settle-it).
+1. `global/convoys.bl` is a SARC bundle; inside it `global/convoys.blo` is an
+   RTPC file describing 263 world entities with literal names.
+2. Every entity carries a `save` property. Exactly **28** have `save = 1` - the
+   14 `CConvoyDataContainer`s and the 14 `CMapIcon`s. Nothing else about a
+   convoy is persisted.
+3. Each container carries an **`objectid`**, and all fourteen of those objectids
+   are keys in the save's property store.
+4. The record they key is 32 bytes: quaternion, position, `u32 state` - `0`
+   never encountered, `2` active, `3` wrecked.
+
+Writing that one field restores a convoy completely. Full detail, and the
+five-step method generalised to other activity types, in
+[GAME-FILES.md](GAME-FILES.md); the format spec is
+[FORMAT.md](FORMAT.md) §7.2.
+
+**The lesson the six probes paid for:** the id that governs a convoy appears
+nowhere in the save file. No amount of diffing saves against each other could
+have produced it, because the key needed to look it up only exists in the game's
+own data. When save diffing stalls, the next move is the game files.
 
 ---
 

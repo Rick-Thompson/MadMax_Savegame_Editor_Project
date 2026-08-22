@@ -26,11 +26,35 @@ State is `1.0` = intact, `0.0` = destroyed. Restore by setting it back to 1.0.
 | 41 | 41 | 0 | 3 | 14 | 19 | 19 | 19 | 0 |  |
 | 42 | 6 | 0 | 2 | 4 | 6 | 6 | 6 | 0 | **fully cleared at 100% - activity class** |
 | 43 | 31 | 1 | 11 | 21 | 31 | 31 | 31 | 1 | **fully cleared at 100% - activity class** |
-| 45 | 34 | 3 | 23 | 34 | 34 | 34 | 34 | 5 | scarecrow / structure (yours was type 45) |
+| 45 | 34 | 3 | 23 | 34 | 34 | 34 | 34 | 5 | scarecrow, confirmed in game (see 45-48 note below) |
 | 46 | 22 | 0 | 9 | 22 | 22 | 22 | 22 | 0 | **fully cleared at 100% - activity class** |
 | 47 | 23 | 0 | 0 | 6 | 23 | 23 | 23 | 0 | **fully cleared at 100% - activity class** |
 | 48 | 18 | 0 | 0 | 0 | 13 | 18 | 18 | 0 | **fully cleared at 100% - activity class** |
-| 49 | 35 | 0 | 10 | 20 | 33 | 35 | 35 | 0 | sniper (tower component) |
-| 52 | 30 | 0 | 9 | 19 | 29 | 30 | 30 | 0 | **fully cleared at 100% - activity class** |
-| 53 | 13 | 0 | 5 | 10 | 13 | 13 | 13 | 0 | **fully cleared at 100% - activity class** |
+| 49 | 35 | 0 | 10 | 20 | 33 | 35 | 35 | 0 | sniper, confirmed in game (36 `snNNNN` ids) |
+| 52 | 30 | 0 | 9 | 19 | 29 | 30 | 30 | 0 | **minefield** (31 `minefield_*` ids in the game file list; wiki says 30) |
+| 53 | 13 | 0 | 5 | 10 | 13 | 13 | 13 | 0 | **convoy** (13 `hoodornaments_convoy_01..13`; 13 rows in table 2) |
 | 69 | 44 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | never cleared - not an activity |
+
+
+## Labels from the game file list
+
+Cross-referencing per-type counts against Gibbed's 27,501-path file list settles
+three types and produces one strong hypothesis. Method and evidence in
+[GAME-FILES.md](GAME-FILES.md).
+
+| type | count | evidence | label |
+|---|---|---|---|
+| 53 | 13 | exactly 13 `hoodornaments_convoy_01..13`, and 13 rows in table 2 | **convoy** |
+| 52 | 30 | 31 distinct `minefield_*` ids; the wiki says 30 minefields | **minefield** |
+| 49 | 35 | 36 distinct `snNNNN` ids | **sniper** (already confirmed in game) |
+
+**Scarecrows probably span types 45-48.** The file list holds 97 distinct
+`scNNNN` ids, and the four adjacent fully-cleared types sum to exactly that:
+
+```
+45 (34) + 46 (22) + 47 (23) + 48 (18) = 97
+```
+
+The game has four scarecrow sizes and type 45 is the one confirmed in game, so
+the four types are likely the four sizes. Five-minute test: destroy a scarecrow
+of a visibly different size and see which type moves.

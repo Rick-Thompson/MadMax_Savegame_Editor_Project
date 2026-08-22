@@ -1,10 +1,12 @@
 # Mad Max (2015) — save file format
 
 **Status: working save editor.** Edited saves load in game, in both save formats,
-and destroyed world objects can be restored — verified in game.
+and destroyed world objects can be restored — static props and cleared convoys
+alike, verified in game.
 
-This is the format spec. For the convoy investigation and the failures see
-`FINDINGS.md`; for how to run your own experiment see `METHODOLOGY.md`.
+This is the format spec. The convoy answer and the game-file work that produced
+it are in `GAME-FILES.md`; the six failed probes that came first are in
+`FINDINGS.md`; how to run your own experiment is in `METHODOLOGY.md`.
 
 Worked out against ~20 real save files: a live playthrough on Linux/Proton, four
 older Windows saves via OneDrive, and a six-stage 0→100% playthrough downloaded
@@ -293,77 +295,78 @@ edits that wiped every other trace of the fight.
 
 ---
 
-## 7. What can and cannot be restored
+## 7. What can be restored
 
-**Static world props can be restored. Dynamic encounters cannot — yet.**
+**Both static props and dynamic encounters can be restored.** They are governed
+by different records, which is what made convoys hard.
 
-| class | example | roster | restorable |
+| class | example | governed by | restorable |
 |---|---|---|---|
-| static prop | scarecrow (type 45) | authoritative | **yes, verified** |
-| dynamic encounter | convoy (type 53) | records the result, does not govern it | **no** |
+| static prop | scarecrow (type 45) | roster state + marker row (§7.1) | **yes, verified** |
+| dynamic encounter | convoy (type 53) | a property-store record keyed by the object's id (§7.2) | **yes, verified** |
 
-Convoys: the roster entry holds `3.0` intact and flips to `0.0` **when the leader
-dies** - not when the support cars are cleared (confirmed by killing the leader
-first, then the escorts, which left the roster alone). Restoring it to `3.0`
-sticks - the game keeps the value across later autosaves - but the convoy does
-not come back.
+### 7.2 Convoys - the container record
 
-Four probes have now failed:
+A convoy's authoritative state is **not** in the roster, the marker table or the
+table-2 position row. All three change when a convoy dies, and none of them
+governs it. The record that does is in the property store, keyed by the
+convoy's `CConvoyDataContainer` **objectid** - a value that appears nowhere in
+the save's own structures and has to be read out of the game data
+(`global/convoys.blo`; see [GAME-FILES.md](GAME-FILES.md)).
 
-1. roster restored to `3.0` alone - convoy still gone
-2. roster + the 9 markers created by the kill removed - still gone
-3. roster + all 22 markers from the whole encounter removed - still gone
-4. roster + the table-2 position row zeroed - still gone
+All fourteen container objectids are keys in the property store of every save
+examined. Each keys a 32-byte record:
 
-**Markers are derived state.** After probe 3 the game regenerated 18 of the 22
-deleted rows on the next autosave, same keys and same flags, with no roster or
-record change. So table 1 is rebuilt from something more authoritative and
-editing it achieves nothing. A support car left over from the fight, still
-carrying its blown tyre, survived the same edit - live world entities persist in
-the unparsed tail of section 2, and that is where the encounter's real state
-must live.
+```
+f32 x4    orientation quaternion
+f32 x3    position
+u32       state
+```
 
-### 7.0 What the full-coverage scan of a convoy kill found
+| state | in the world | on the map |
+|---|---|---|
+| **0** | convoy present | not marked - undiscovered |
+| **2** | present and complete | **marked in red, fully playable** |
+| **3** | wrecked, position frozen at the wreck | cleared |
 
-With section 3 parsed by hash, the ten-frame snapshot series was re-scanned:
-four control frames of ordinary driving, then the four frames spanning the
-convoy fight. Control-subtracted, the kill moves exactly **24 features** that
-never move during control:
+Verified in game both ways, on a live playthrough save and on the 100% reference
+save. `convoy.py reset --state S` writes it. The game re-saves the slot
+afterwards and keeps the value, which is what confirms the record is
+authoritative rather than reconstructed from something else.
 
-| where | change |
-|---|---|
-| roster `593B2B20` | `3.0` -> `0.0` |
-| table 2 `194895AE` | position frozen at the wreck |
-| markers | 9 rows added, all flagged `0003` |
-| section 3 | 21 records added, 4 modified |
-| section 1 | **nothing** - the record stream does not track convoys at all |
+The roster flag, the ~22 marker rows, the table-2 position and the 13-record
+per-vehicle ledger are all **downstream** of this field. Editing any of them in
+isolation does nothing - six probes proved that the hard way, and the history is
+in [FINDINGS.md](FINDINGS.md).
 
-The 21 added section-3 records are all present, with byte-identical values, in
-every reference-ladder stage from PT2 (5 convoys dead) through PT6 (all 13 dead), and
-absent in PT1 (none dead). They do **not** change between PT3 and PT4 when three
-more convoys die. So they are one-time global first-kill flags, not per-convoy
-state.
+### 7.3 Notes on the derived records
 
-**Conclusion: the only per-convoy persistent state in the whole file is
-`roster[key].state` plus the position row in table 2.** There is no hidden
-completion record. The markers are derived, section 1 is silent, and the
-property store only counts firsts.
-
-That narrowed the open question to one testable thing: whether a stored position
-in table 2 is what marks a convoy as already-instantiated. `convoy.py revive`
-restores the roster state to `3.0` **and** zeroes the position row - the one
-combination none of the three earlier probes had tried.
-
-**Probe 4 result: it does not work.** The edited save loads, the roster reads
-alive and the position row reads unspawned, and the convoy is still cleared in
-game. Every structure in the file that parses has now been covered. See
-`FINDINGS.md` for what that leaves.
+**Markers are derived state.** Delete rows from table 1 and the game regenerates
+them on the next autosave - 18 of 22 came back with identical keys and flags,
+with no roster or record change. Editing table 1 for a convoy achieves nothing.
 
 Marker flags, for the record: `0003` = tracked/live, `0000` = resolved. A
 scarecrow kill adds exactly one marker flagged `0000`; the convoy fight added 22,
 all flagged `0003`, never one `0000`. Support cars respawn when they unload from
 memory, so the markers are not per-vehicle kill records - they track the leader's
 components and damage.
+
+**What a convoy kill writes,** from a control-subtracted ten-frame snapshot
+series (four control frames of ordinary driving, four spanning the fight):
+
+| where | change |
+|---|---|
+| **property store, container objectid** | **state `2` -> `3`, wreck position stored** |
+| roster `593B2B20` | `3.0` -> `0.0` |
+| table 2 `194895AE` | position frozen at the wreck |
+| markers | 9 rows added, all flagged `0003` |
+| section 3, elsewhere | 21 records added, 4 modified |
+| section 1 | **nothing** - the record stream does not track convoys at all |
+
+The 21 added property records are one-time global first-kill flags, not
+per-convoy state: they are byte-identical in every reference-ladder stage from
+PT2 (5 convoys dead) through PT6 (all 13 dead), absent in PT1, and unchanged
+between PT3 and PT4 when three more convoys die.
 
 ## 7.1 Restoring a static object — verified
 
