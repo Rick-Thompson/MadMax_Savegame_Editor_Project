@@ -22,6 +22,10 @@ xvm.py strings FILE.xvmc --lib L...  its debug strings
 sarc.py list|get FILE.bl [OUTDIR]     read a SARC bundle
 rtpc.py dump FILE.blo [--names D.tsv] read RTPC entity data
 
+crack.cpp   HIP lookup3 brute-forcer (gfx906) - recovers graph pin/class
+            names; build: hipcc --offload-arch=gfx906 -O3 -o crack crack.cpp
+            run:   ./crack <k> <start> <count>  (see docs/HASHES.md)
+
 adf.py typelib MADMAX.EXE OUTDIR     pull the type library out of the executable
 adf.py dump FILE --names D.tsv --lib L...   decode a .gsrc/.adf into a tree
 

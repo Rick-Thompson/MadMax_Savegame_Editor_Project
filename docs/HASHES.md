@@ -121,6 +121,55 @@ matches under a plain identifier regex and 6752 real ones under the
 NUL-delimited one. In practice this is now moot: `arcx.py` extracts real files,
 which beats scraping compressed bytes.
 
+## Brute force: the GPU run
+
+The graph pin/class names were recovered by brute force on two AMD MI50 GPUs, and
+the result is a clean lesson in *when* brute force works against a 32-bit hash.
+
+`tools/crack.cpp` is a HIP port of `lookup3` (verified against the canonical
+test vectors on GPU). It joins vocabulary tokens with `_` into 1-, 2- and
+3-token snake_case candidates and checks each against the 451 unresolved graph
+hashes. Vocabulary: the 4000 most frequent tokens from `master.dirlist` plus a
+hand list of gameplay/graph terms (4051 words). `data/graph-names.tsv` is the
+result.
+
+The outcome is governed entirely by the collision floor, not by compute:
+
+| pass | candidates | expected false hits | real names found |
+|---|---|---|---|
+| k=1 (`word`) | 4,051 | ~0 | 4 |
+| k=2 (`a_b`) | 16.4 M | ~1.7 | ~33 |
+| k=3 (`a_b_c`) | 66.5 **billion** | **~7,000** | buried |
+
+Both GPUs swept the full 66-billion-candidate 3-token space in seconds - compute
+was never the limit. But a 32-bit hash over 66 billion candidates produces about
+`66e9 x 451 / 2^32 ~ 7000` random collisions, ~15 per target, and the real
+3-token names are indistinguishable from the 15 plausible-looking snake_case
+strings that collide with each. **k=3 output is noise.**
+
+k=1 and k=2 stay below the floor (`16.4M x 451 / 2^32 ~ 1.7` expected false), so
+their 37 hits are almost all real. Every one was re-hashed on CPU to confirm the
+GPU result, and two obvious collisions with digits (`cam6_wrench`,
+`debri17_shadow`) were dropped, leaving **35 verified names**:
+
+```
+in  out_pos  in_pos  in_object  in_objects  in_position  in_transform  in_rotation
+in_state  in_array  in_max  in_interval  out_transform  out_pos  out_size  out_int
+out_priority  wrecked  relic_id  spawn_id  despawn_ids  convoy_data  wreck_transform
+road_distance  resource_object  economy_resource  name_hash  reset_in  next_pass
+not_spawned  frame_amount  speed_max  debug_text  unlocked  encampment_anchor  id
+```
+
+Feeding these back into `adf.py` lifted the choreographer's resolved references
+from 310 to 354.
+
+**The rule:** brute force cracks a 32-bit name hash only when the candidate
+space stays small enough that expected collisions across the whole target set
+stay near zero - here, up to ~10^7 candidates. Past that the hash's own
+narrowness defeats you, no matter how fast the hardware. The save keys
+(§ above) fail this test twice over: the target set is large *and* no candidate
+form matches, so they are not a brute-force target at all.
+
 ## Brute force: where it helps
 
 Worth being precise, because the two hash problems in this project have opposite
