@@ -104,8 +104,8 @@ docs/
   OPEN-QUESTIONS.md       what is still unsolved, and what to try next
   GAME-FILES.md           the game's own archives - where the convoy answer came from
   OBJECT-TYPES.md         the 1520-entry object roster, per-type counts
+  LOCATIONS.md            every location/activity type, with counts and evidence
   HASHES.md               the name hash - where it applies, and where it does not
-  GAME-FILES.md           reading the game's own archives, and what they confirm
   SCRIPTS.md              the game's save/load script, disassembled
 tools/                    the Python utilities (see tools/README.md)
 data/
