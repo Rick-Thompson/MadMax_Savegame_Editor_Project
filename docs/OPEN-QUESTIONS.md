@@ -94,6 +94,31 @@ saves via OneDrive. The XOR key, header layout and integrity behaviour are
 identical across both, and across save format generations 2 and 6. Consoles are
 entirely untested.
 
+**Windows writes: the core path is confirmed.** A player edited their scrap on
+Windows (`resource.py set 42=N`) and the game loaded the result without
+complaint. That is the single most important thing to have verified off-Linux,
+because it exercises the whole decode -> edit -> reseal chain: the XOR key, the
+mirror and padding layout, length preservation, and above all the **delta-carry
+integrity value**. If the checksum carry were wrong on Windows the game would
+have rejected the save outright, so this rules out the failure mode that would
+have broken everything.
+
+Still unverified on Windows, in rough order of risk:
+
+| edit class | example | exercised by the scrap test? |
+|---|---|---|
+| resource stream record | `resource.py set 42=N` | **yes** |
+| section-2 table entry | `mmworld.py --restore-type`, roster/marker edits | no |
+| property store record | `convoy.py reset` | no |
+| slot-byte rewrite | `--slot N` | no |
+
+The table edits are the ones worth testing next, because that is where the
+positional-index fragility lives (see the `roles()` note in
+[FINDINGS.md](FINDINGS.md)) - a later-game save grows an extra 24-byte table and
+shifts everything after it. A convoy reset is the single best test available: it
+touches a table **and** a property-store record in one operation, and the result
+is obvious in game.
+
 ## 8. Position editing
 
 Record `id 0` in the record stream is a 64-byte 4x4 transform — a

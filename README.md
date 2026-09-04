@@ -157,7 +157,12 @@ The most useful things anyone could add:
    11, 12, 17, 26, 37, 40, 41, 69 are still unidentified. Labelling one takes about two minutes: destroy one thing in
    game, save, and diff.
 6. **Windows / other-platform confirmation.** Everything here was worked out on
-   Linux under Proton plus four older Windows saves.
+   Linux under Proton. A player has confirmed a **scrap edit loads correctly on
+   Windows**, which validates the decode/reseal chain including the integrity
+   value - the failure mode that would have broken everything. Table edits and
+   convoy resets are still unverified there; a convoy reset is the best single
+   test, since it touches both. See
+   [docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md).
 
 Please include the before/after saves with any finding. Half the wrong turns
 recorded in these docs would have been caught by someone else re-running the
