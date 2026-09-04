@@ -48,13 +48,9 @@ three types and produces one strong hypothesis. Method and evidence in
 | 52 | 30 | 31 distinct `minefield_*` ids; the wiki says 30 minefields | **minefield** |
 | 49 | 35 | 36 distinct `snNNNN` ids | **sniper** (already confirmed in game) |
 
-**Scarecrows probably span types 45-48.** The file list holds 97 distinct
-`scNNNN` ids, and the four adjacent fully-cleared types sum to exactly that:
-
-```
-45 (34) + 46 (22) + 47 (23) + 48 (18) = 97
-```
-
-The game has four scarecrow sizes and type 45 is the one confirmed in game, so
-the four types are likely the four sizes. Five-minute test: destroy a scarecrow
-of a visibly different size and see which type moves.
+**Scarecrows span types 45-48 - confirmed.** `global/tracked_objects.bl` holds a
+per-class registry whose list of 97 object ids resolves to roster types 45, 46,
+47 and 48 together (see [GAME-FILES.md](GAME-FILES.md)). That matches the 97
+distinct `scNNNN` ids in the file list and the four scarecrow sizes the game
+ships. The registry also confirms sniper (35 x type 49) and minefield
+(30 x type 52). No in-game test needed for any of the three.

@@ -254,6 +254,13 @@ def to_py(adf,lib,inst,maxdepth=64):
             et=lib.get(t['elem'])
             if not et: return []
             return [walk(t['elem'],aoff+i*et['size'],depth+1) for i in range(acnt)]
+        if k==INLINE_ARRAY:
+            if t['elem'] in PRIM:
+                n,esz=PRIM[t['elem']]
+                return [walk(t['elem'],o+i*esz,depth+1) for i in range(t['elen'])]
+            et=lib.get(t['elem'])
+            if not et: return []
+            return [walk(t['elem'],o+i*et['size'],depth+1) for i in range(t['elen'])]
         if k==STRING:
             soff,=struct.unpack_from('<q',d,o); e=d.index(b'\0',soff)
             return d[soff:e].decode('latin1')

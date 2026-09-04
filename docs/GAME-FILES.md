@@ -355,3 +355,48 @@ convoy-specific:
 Step 3 is the one that does the work. Out of 263 entities in the convoy bundle,
 28 have `save = 1`, and they were the answer. Camps, minefields, sniper towers
 and the rest have their own bundles, and the same five steps should apply.
+
+
+## global/tracked_objects.bl - the per-class object registry
+
+A SARC holding one file, `tracked_objects.trackedobjectdatac`, which is an ADF
+carrying its **own** type definitions:
+
+```
+TrackedObjectDataTable {
+    TrackedDataListsByObjectType : IA[TrackedDataList]   inline array, 5 entries
+}
+TrackedDataList { TrackedObjectIDs : A[uint64] }
+```
+
+Five lists, holding 178 object ids between them. Their low 32 bits are **roster
+keys**, which makes this a direct class -> roster-entry map:
+
+| list | count | roster types present | meaning |
+|---|---|---|---|
+| 0 | 16 | none - not in any table | unidentified tracked class |
+| 1 | 35 | **49** x35 | sniper |
+| 2 | 97 | **45** x31, **46** x22, **47** x23, **48** x18 (+3 not in roster) | **scarecrows** |
+| 3 | 30 | **52** x29 (+1 not in roster) | minefield |
+| 4 | 0 | - | empty |
+
+**This confirms the 45-48 scarecrow hypothesis from game data rather than
+arithmetic.** The four types are one tracked class of 97 objects - matching the
+97 distinct `scNNNN` ids in the file list, and the four scarecrow sizes the game
+ships. No in-game test needed.
+
+It also means the roster's type ids are a *finer* grouping than the game's own
+tracked-object classes: the game thinks in "scarecrow", the roster splits that
+into four size variants.
+
+List 0 is the open one - 16 tracked objects that appear in no save table at all.
+
+### What is NOT here
+
+Camps. `scrap_depot` (19), `fuel_depot` (6), `food_depot` (2),
+`warchief_camp` (4) and `scrotus_camp` (3) have no entry in this registry, and
+their per-instance `.blo` files
+(`locations/<region>/activities/<type>/<id>/<id>.blo`) are not reachable from
+the win64 archives by basename hash the way `convoys.bl` was. So camp state
+cannot be resolved from the game files with the current tooling - it needs
+before/after saves.
