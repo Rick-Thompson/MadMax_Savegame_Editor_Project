@@ -77,7 +77,18 @@ basenames, stems and path tokens) and the class field namelists:
 | table 3 roster | 1520 | 0 |
 | property store | 706 / 10706 | 0 |
 
-Zero, in both the 0% and the 100% reference save. An independent run by another
+Zero, in both the 0% and the 100% reference save.
+
+**One of those rows has since been explained, and it was not a hash.** The 1520
+roster keys are `EconomyResource.ID` values - world object ids the game ships
+verbatim in `global/economyresources.economyresourcesc`, matching 1520 of 1520.
+They were never going to be recovered by hashing names, because they are not
+derived from names at all. See [ECONOMY.md](ECONOMY.md).
+
+That is worth holding onto as a general warning: a keyspace that resists every
+hash function may not be hashed. The other four rows above are still unexplained,
+but "it must be a hash of something" is an assumption, and this project has now
+been wrong about it once. An independent run by another
 model reached the same result from a different candidate set (58,995 strings),
 and additionally swept Jenkins seeds 0-255 and tried FNV-1a, DJB2, SDBM, CRC-32
 and Murmur3. Also zero.

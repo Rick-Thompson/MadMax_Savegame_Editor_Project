@@ -51,19 +51,21 @@ structural — a count, a padding rule, a second pass — rather than from a
 different polynomial. Someone with the binary in a disassembler would find this
 in an afternoon.
 
-## 3. Unlabelled object types
+## 3. Unlabelled object types — CLOSED
 
-Types 49, 52 and 53 are now labelled (sniper, minefield, convoy) from the game's
-file list, and scarecrows probably span 45-48 - see
-[OBJECT-TYPES.md](OBJECT-TYPES.md).
+All 25 profile ids that appear in a save are now labelled directly from the
+game's own data. `ProfileIndex` indexes `global/economyresources.economyresourcesc`,
+and the never-cleared ids that looked like scenery turned out to be ordinary
+pickups: 11 and 12 are Water, 26 and 37 Scrap, 40 and 41 Food, 5 Fuel, 69 a
+FillChance-0 Scrap row. See [ECONOMY.md](ECONOMY.md).
 
-Ten type ids still have no label: **5, 10, 11, 12, 17, 26, 37, 40, 41, 69**. Types 11, 17, 26, 37 and 69 are never cleared even at 100% completion, so
-they are probably scenery or permanent structures. Types 5, 10, 12, 40 and 41
-are only partially cleared, which makes them the interesting ones.
-
-Labelling one takes about two minutes: destroy one in game, save, run
-`sec2.py before.sav after.sav`, note which type moved. Per-type counts are in
-[OBJECT-TYPES.md](OBJECT-TYPES.md).
+What replaced this question is narrower and more interesting: **a camp's state
+beyond its threat value.** The Threat row is strictly binary — full or zero,
+never partial, across 37 camps x 6 ladder saves — so the three map states
+(undiscovered / discovered / objective met) and the 100%-complete state the map
+never draws are stored somewhere else. The property store is the obvious
+candidate, since that is where the convoy answer turned out to be. A staged
+capture of one camp cleared step by step would settle it.
 
 ## 4. The rest of the resource stream
 

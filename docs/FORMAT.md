@@ -155,20 +155,28 @@ u32 size, u32, u32, const 4, u32 count, u32 one, u32 count*entrysize
 ### Table 3 — the object roster
 
 ```
-u32 key, u32 0, u32 type, f32 state, u32 546, u32 0
+u64 ID, u8 ProfileIndex, u8 pad[3], f32 LastAmount, u32 LastVisited, u32 pad
 ```
 
-Sorted by key, **1520 entries in every save examined** — same count and same
-per-type counts in a 2017 playthrough and in a 2026 one. The type map is
-universal. `state` is `1.0` intact, `0.0` destroyed.
+Sorted by ID, **1520 entries in every save examined** — same count and same
+per-profile counts in a 2017 playthrough and in a 2026 one, because the table is
+**a verbatim copy of the first 1520 rows of the game's own
+`global/economyresources.economyresourcesc`**. Every ID and ProfileIndex matches
+the shipped file, 1520 of 1520. Full decode in [ECONOMY.md](ECONOMY.md).
 
-Types fully cleared by 100%: 27 (110), 29 (420), 31 (127), 32 (157), 34 (130),
-35 (4), 42 (6), 43 (31), 45 (34), 46 (22), 47 (23), 48 (18), 49 (35), 52 (30),
-53 (13). Never cleared: 11, 17, 26, 37, 69. Partial: 5, 10, 12, 40, 41.
+`ProfileIndex` selects one of 71 `EconomyResourceProfile` rows, each carrying a
+resource type (Water, Food, Fuel, Scrap, Threat, Ammo_Shotgun, Ammo_Sniper,
+Ammo_Thunderstick, Shiv), a start amount and a capacity.
 
-A scarecrow was type 45; a sniper tower flipped one type 45 and one type 49, so
-45 is a destructible structure class and 49 the sniper. To label a class, destroy
-one of something and see which type moves.
+`LastAmount` is **a quantity, not a flag**: a water source reads 465.468, a scrap
+pile 13.254. Threat objects only look boolean because their capacity is 1. The
+correct restore value is the profile's `StartAmountMax`. `LastVisited` is a
+respawn clock, not the constant 546 an earlier reading of this table assumed.
+
+`global/regioninfo.regioninfoc` groups the same row indices by threat class:
+37 camps, 97 scarecrows, 35 snipers, 13 convoys, 30 minefields. A third instance
+in the economy ADF holds one world XYZ per row, so any entry can be placed on
+the map.
 
 ### Table 2 — convoy positions
 

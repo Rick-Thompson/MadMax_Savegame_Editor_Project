@@ -21,6 +21,13 @@ That took a while. Six earlier attempts failed because they edited records that
 [docs/FINDINGS.md](docs/FINDINGS.md) and the answer is in
 [docs/GAME-FILES.md](docs/GAME-FILES.md).
 
+The save's largest table is **fully decoded** too. The 1520-entry roster is a
+verbatim copy of the game's own economy table, matching 1520 of 1520 rows on ID
+and profile - so every entry now has a resource type, a capacity, a threat class
+and a world position read from the game's data rather than inferred. That is
+also what settles the counts: **37 camps**, 97 scarecrows, 35 snipers, 13
+convoys, 30 minefields. See [docs/ECONOMY.md](docs/ECONOMY.md).
+
 This is published so other people can take it further. Everything here is
 reproducible from the sample saves in `data/`.
 
@@ -49,14 +56,22 @@ reproducible from the sample saves in `data/`.
 | set scrap | `resource.py set 42=N` | **yes, in game** |
 | inspect the 13 convoys | `convoy.py list` | yes |
 | restore cleared convoys | `convoy.py reset --state 2` | **yes, in game** |
+| name every roster entry from the game's data | `economy.py tables / dump` | yes |
+| refill scrap, water, fuel and ammo pickups | `economy.py refill --type Scrap` | not yet in game |
 
 ## What is still open
 
-The **save's key scheme**. Every key in a save is a hash of *something*, but
-nothing in 101,426 real game names matches under `lookup3` or five other
-functions, so the keys stay opaque - you can edit a record once you know what it
-governs, but you cannot look one up by name. See
+The **property store's key scheme**. Its keys are 64-bit and opaque: nothing in
+101,426 real game names, nor in 398,623 strings harvested from the binaries,
+matches under `lookup3` or five other functions. You can edit a record once you
+know what it governs, but you cannot look one up by name. See
 [docs/HASHES.md](docs/HASHES.md).
+
+This is narrower than it used to be. "Every key in a save is a hash" was too
+strong: the 1520-entry roster is keyed by `EconomyResource.ID`, a world object
+id the game ships in `economyresources.economyresourcesc`, and those are now
+resolvable by lookup rather than by hashing. Only the property store is still
+opaque.
 
 The **integrity value** at offset 0 is not solved in closed form, so every edit
 must preserve file length. The delta-carry workaround makes that a non-issue in
@@ -103,9 +118,10 @@ docs/
   METHODOLOGY.md          how to run a save-diff experiment without fooling yourself
   OPEN-QUESTIONS.md       what is still unsolved, and what to try next
   GAME-FILES.md           the game's own archives - where the convoy answer came from
-  OBJECT-TYPES.md         the 1520-entry object roster, per-type counts
+  ECONOMY.md              the 1520-entry roster, decoded against the game's own
+                          economy table - start here for anything roster-shaped
+  OBJECT-TYPES.md         per-profile counts across the 0%->100% ladder
   LOCATIONS.md            every location/activity type, with counts and evidence
-  ECONOMY.md              the 1520-entry roster, fully decoded against game data
   HASHES.md               the name hash - where it applies, and where it does not
   SCRIPTS.md              the game's save/load script, disassembled
 tools/                    the Python utilities (see tools/README.md)
@@ -126,8 +142,8 @@ header (slot, playtime, timestamps, payload length) followed by the payload,
 usually an identical mirror copy of the payload, and zero padding to a 512-byte
 boundary. The payload has three parts: a `(u32 id, u32 size, value)` record
 stream holding story and mission state; four tables, of which the 1520-entry
-24-byte one is the world-object roster and the 13-entry 32-byte one is the
-convoys; and a large hash-named property store sorted by key. A u32 at offset 0
+24-byte one is a verbatim copy of the game's economy table (scrap piles, water,
+food, ammo and the threat objects) and the 13-entry 32-byte one is the convoys; and a large hash-named property store sorted by key. A u32 at offset 0
 is an integrity value that the game checks — it is not solved in closed form,
 but it depends only on file length, so it can be carried across any
 length-preserving edit. Full detail in [docs/FORMAT.md](docs/FORMAT.md).
@@ -142,21 +158,29 @@ The most useful things anyone could add:
    decodes them into named node graphs - see
    [docs/GAME-FILES.md](docs/GAME-FILES.md). The spawner turned out to be just
    the map icon; `convoy_choreographer.gsrc` and the spawning graphs are next.
-2. **The save's key scheme.** Every key in a save is a hash of *something*, and
-   nothing in 101,426 real game names matches under `lookup3` or five other
-   functions. See [docs/HASHES.md](docs/HASHES.md).
+2. **The property store's key scheme.** Its 64-bit keys match nothing in 101,426
+   real game names or 398,623 binary strings, under `lookup3` or five other
+   functions. Note this is now the *only* opaque keyspace left: the roster's
+   keys turned out not to be hashes at all. See [docs/HASHES.md](docs/HASHES.md).
 3. **The other activity types.** Convoys are solved, and the method that solved
    them is five repeatable steps (see
    [docs/GAME-FILES.md](docs/GAME-FILES.md)): find the activity's `.bl` bundle,
    unpack the SARC, decode the RTPC, take the `objectid`s of entities with
-   `save = 1`, look those up in the property store. Camps, minefields and sniper
-   towers have their own bundles and nobody has looked yet.
+   `save = 1`, look those up in the property store. **Vantage points are the
+   best next target**: `CVantagePoint` is a `CGameObjectCreator` class exactly
+   like `CConvoyDataContainer`, so the method should apply unchanged. Camps are
+   harder - their per-instance `.blo` files are not reachable by basename hash,
+   so they need a staged save series instead.
 4. **A closed-form solution to the integrity value.** The delta-carry workaround
    means edits must preserve file length. Solving it properly would lift that.
-5. **Object type labels.** Types 52 and 53 are now settled from the game's file
-   list, and scarecrows probably span 45-48 (see GAME-FILES.md). Types 5, 10,
-   11, 12, 17, 26, 37, 40, 41, 69 are still unidentified. Labelling one takes about two minutes: destroy one thing in
-   game, save, and diff.
+5. **Camp state beyond threat.** All 25 roster profiles are now labelled from
+   the game's own data, so that job is done. What is not is the rest of a camp's
+   state: its Threat row is strictly binary (full or zero, never partial, across
+   37 camps x 6 ladder saves), so the three map states and the hidden
+   100%-complete state live somewhere else - most likely the property store,
+   which is where the convoy answer turned out to be. A staged capture of one
+   camp being cleared step by step would settle it. See
+   [docs/ECONOMY.md](docs/ECONOMY.md).
 6. **Windows / other-platform confirmation.** Everything here was worked out on
    Linux under Proton. A player has confirmed a **scrap edit loads correctly on
    Windows**, which validates the decode/reseal chain including the integrity
