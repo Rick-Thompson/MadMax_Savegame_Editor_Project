@@ -57,6 +57,7 @@ reproducible from the sample saves in `data/`.
 | inspect the 13 convoys | `convoy.py list` | yes |
 | restore cleared convoys | `convoy.py reset --state 2` | **yes, in game** |
 | name every roster entry from the game's data | `economy.py tables / dump` | yes |
+| list collected / missing relics and hood ornaments | `relics.py list / missing` | yes |
 | refill scrap, water, fuel and ammo pickups | `economy.py refill --type Scrap` | not yet in game |
 
 ## What is still open

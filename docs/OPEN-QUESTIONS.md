@@ -67,6 +67,16 @@ never draws are stored somewhere else. The property store is the obvious
 candidate, since that is where the convoy answer turned out to be. A staged
 capture of one camp cleared step by step would settle it.
 
+## 3b. Can an insert be made length-preserving?
+
+Everything here has to preserve file length, which rules out adding records -
+so the collectibles list can be read but not added to. There may be a way
+round it: the file is zero-padded to a 512-byte boundary, so if the payload
+grows by 12 bytes (24 with the mirror) and the padding shrinks by the same
+amount, total length is unchanged and the delta stays valid. Untested, and it
+needs the header's `block_len` updated to match. If it works it unlocks every
+"add an entry" edit, not just relics.
+
 ## 4. The rest of the resource stream
 
 Scrap is an f32 in the resource stream (its id moves between saves - see

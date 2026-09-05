@@ -315,6 +315,49 @@ Matched on the raw bytes, that signature hits exactly twice in every one of the
 14 saves tested - the payload copy and the mirror copy - and never anywhere
 else.
 
+#### The collectibles stream
+
+Another of these streams is the collected-relics list, and it is **not** keyed
+by a hash:
+
+```
+index 0        u32 N        how many are collected
+index 1..N     u32 relicId  the Id field from legend/relics.relicsetc
+```
+
+`relics.relicsetc` ships 103 `HistoryRelic` and 13 `HoodOrnamentRelic` entries,
+each with a u32 `Id`. Every value in the save's stream is one of those ids, and
+N equals the total exactly, across the whole ladder:
+
+```
+PT2   34 = 29 history +  5 hood
+PT3   69 = 59         + 10
+PT4  102 = 89         + 13
+PT5  116 = 103        + 13     100%
+PT6  116 = 103        + 13
+```
+
+`tools/relics.py list|missing` reads it. Read-only: adding a relic means adding a
+12-byte record, and edits have to preserve file length.
+
+This is the second structure to turn out to be keyed by an id the game ships
+rather than by a name hash - the 1520-entry roster was the first, see
+[ECONOMY.md](ECONOMY.md). Worth making the default hypothesis for any opaque id
+list here: look for a shipped table before reaching for a hash function.
+
+#### Other streams in section 2
+
+The 100% save has seven id-0 record streams, not one. Two more are partly read:
+
+- **36 x `(u16 index, f32 ~600.02, f32 600.00)`** - 36 timers at 600 seconds.
+  The count tracks camps dismantled across the ladder (PT2 15 timers / 13 camps,
+  PT3 25/25, PT4-6 36/37), which fits the periodic scrap income a dismantled
+  camp pays. Not confirmed.
+- **`u8 51` + 51 u32 values**, growing 17 -> 30 -> 43 -> 49 -> 51 across the
+  ladder and strictly additive. Another acquired-things set, contents
+  unidentified; hashing the 44 real upgrade names out of
+  `encampmentvehicleupgradedefinitions` against it gives zero matches.
+
 Neither region is understood well enough to edit safely. Region A is the more
 interesting of the two: it is where a shot-up support car persisted across
 edits that wiped every other trace of the fight.

@@ -66,6 +66,9 @@ convoy.py list SAVE.sav              the 13 convoys: roster state + position row
 mmworld.py SAVE.sav --status         what is destroyed, by object type
 resource.py list SAVE.sav            every section-2 record stream, with ids
 resource.py scrap SAVE.sav           read scrap
+relics.py list|missing GAMEDIR SAVE  collected history relics and hood
+                                     ornaments, checked against the game's
+                                     own relics.relicsetc (read-only)
 ```
 
 ## Editing
