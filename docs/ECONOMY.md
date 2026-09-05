@@ -148,13 +148,51 @@ $ economy.py dump "<game>" data/ladder/PT6.sav --class camp
 Clearing a camp drives `LastAmount` to zero. Setting it back to `StartAmountMax`
 is what `refill` does.
 
+## What a camp's rows look like
+
+A camp is not one row. It is one Threat row plus the loot rows standing inside
+its walls, and the economy table's `positions` instance makes those findable:
+432 non-threat rows sit within 150 world units of a camp centre, about 28% of
+the whole roster. A typical camp holds 8-15 Scrap rows, 1-2 Water and 0-3 Food.
+
+**The Threat row is strictly binary.** Across 37 camps x 6 ladder saves it reads
+either full (6 or 14) or exactly 0 - never a partial value, not once. So
+`LastAmount` on a camp is a single event flag, not a completion percentage, and
+it cannot by itself be the "100% complete" state that the map does not draw.
+
+**But the loot is gone by the time it flips.** Taking each camp at the ladder
+step where its threat hit zero:
+
+```
+406 of 432 interior rows were already looted at that step   (94.0%)
+and the figure is identical at PT6 - nothing was collected afterwards
+```
+
+Of the 26 that stayed full, 21 are Food (profiles 40 and 41). Food is eaten on
+the spot and respawns, so a 100% player has no reason to have cleared it.
+Excluding Food, the interior is **406 of 411 emptied, 98.8%**, and it does not
+change between the step where the camp flips and the end of the game.
+
+That is consistent with a camp being finished in one visit - loot first, then
+the objective - which is both how the walkthrough advises playing it ("Try to
+get all collectibles before liberating the camp") and how the completion screen
+behaves (it can be seen twice if you go back for a missed collectible). The
+ladder steps are coarse, so this shows the two happen inside the same step; it
+does not prove an ordering, and it does not prove the game requires one.
+
+The practical consequence for replaying a camp is the useful part: resetting a
+camp means resetting **its Threat row and its interior loot rows**, and those
+rows can now be enumerated by position rather than guessed.
+
 ## What is still unknown
 
-`LastAmount` is the *threat* the camp contributes, not its completion state. A
-camp has more state than one float: three map states (undiscovered / discovered
-/ objective met) plus a hidden 100%-complete flag, and the exe carries
-`IsCampMainMissionCompleted` and `OWScrotusCampObjectiveCompleted` as separate
-calls from `EnemyCampCleared`. Refilling threat has **not** been tested in game
+`LastAmount` is the *threat* the camp contributes, and the section above shows
+it is binary. A camp has more state than that one float: three map states
+(undiscovered / discovered / objective met) plus a 100%-complete state the map
+never draws, and the exe carries `IsCampMainMissionCompleted` and
+`OWScrotusCampObjectiveCompleted` as separate calls from `EnemyCampCleared`.
+Where those live is unknown - the property store is the obvious candidate, since
+that is where the convoy answer turned out to be. Refilling threat has **not** been tested in game
 and may well produce a camp that reads as hostile on the map but is still
 internally cleared — the same trap that cost six probes on convoys, where the
 authoritative record turned out to be a property-store entry and everything in
