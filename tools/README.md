@@ -21,6 +21,13 @@ xvm.py strings FILE.xvmc --lib L...  its debug strings
 
 sarc.py list|get FILE.bl [OUTDIR]     read a SARC bundle
 rtpc.py dump FILE.blo [--names D.tsv] read RTPC entity data
+adf.py  info|types|dump|typelib FILE  read an ADF (game data tables)
+
+economy.py tables GAMEDIR             the 71 economy profiles and per-class counts
+economy.py dump   GAMEDIR SAVE [--type T] [--class C]
+                                      annotate the 1520-entry roster with the
+                                      game's own names, capacities and world
+                                      positions - see docs/ECONOMY.md
 
 run-crack.sh  driver for crack.cpp: builds it, then sweeps k=1, k=2 and k=3
             across both GPUs. Only the k=1/k=2 output is usable - see
@@ -80,6 +87,16 @@ convoy.py revive IN OUT --roster HEX [--misc HEX] [--slot N]
                                      legacy single-convoy roster+position edit.
                                      Kept for reference: it does NOT restore a
                                      convoy on its own - see docs/FORMAT.md 7.2.
+
+economy.py refill GAMEDIR IN OUT [--type T] [--class C]
+                                     set LastAmount back to the profile's
+                                     StartAmountMax. Filter it: --type Threat
+                                     re-arms every camp, sniper, scarecrow,
+                                     minefield and convoy at once, and refilling
+                                     camp threat is UNTESTED in game - a camp
+                                     may read hostile on the map while staying
+                                     internally cleared. --type Scrap and
+                                     --type Water are the safe uses.
 
 sec2edit.py IN OUT [--set T:KEY:HEX] [--add T:HEX] [--del T:KEY] [--slot N]
 madmax_save.py setrec IN OUT ID=HEX

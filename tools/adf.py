@@ -104,13 +104,18 @@ class Adf:
                    flags=flags,elem=eth,elen=elen,members=[])
             cnt,=struct.unpack_from('<I',self.data,o); o+=4
             if typ==STRUCTURE:
+                # 32 bytes: s64 nameIndex, u32 typeHash, u32 size, u32 offset,
+                # u32 flags, u32 u14, u32 u18.  `offset` is 32-bit, NOT 64 -
+                # reading it as s64 swallows `flags` and yields offsets like
+                # 0x100000000.  Files whose members all have flags==0 parse
+                # either way, which is why this went unnoticed until
+                # encampmentvehicleupgradedefinitions (flags 1 and 2).
                 for _m in range(cnt):
                     mi,=struct.unpack_from('<q',self.data,o)
-                    th,msz=struct.unpack_from('<II',self.data,o+8)
-                    moff,=struct.unpack_from('<q',self.data,o+16)
-                    u14,u18=struct.unpack_from('<II',self.data,o+24); o+=32
+                    th,msz,moff,mfl,u14,u18=struct.unpack_from('<IIIIII',self.data,o+8)
+                    o+=32
                     t['members'].append(dict(name=self._nm(mi),type=th,size=msz,
-                                             offset=moff,u14=u14,u18=u18))
+                                             offset=moff,flags=mfl,u14=u14,u18=u18))
             elif typ==ARRAY:
                 if cnt: raise ValueError("array type with %d members"%cnt)
             elif typ==ENUM:
@@ -133,6 +138,14 @@ class Adf:
             ni,=struct.unpack_from('<q',self.data,o+16); o+=24
             out.append(dict(hash=nh,type=th,offset=off,size=size,name=self._nm(ni)))
         return out
+
+def _str(d,o):
+    """Read the primitive `String` type (hash 8955583E): an s64 offset, relative
+    to the instance, to a NUL-terminated string. It is a primitive, so it never
+    appears in a file's type table and must be special-cased."""
+    soff,=struct.unpack_from('<q',d,o)
+    if soff<=0 or soff>=len(d): return ''
+    return d[soff:d.index(b'\0',soff)].decode('latin1')
 
 def render(adf,lib,inst,maxdepth=64):
     """-> list of output lines for one instance.
@@ -185,6 +198,8 @@ def render(adf,lib,inst,maxdepth=64):
             if PRIM.get(th,('',0))[0]=='uint32':
                 n=resolve(struct.unpack_from('<I',d,o)[0])
             out.append("%s%s = %s%s"%(pad,label,p," (=%s)"%n if n else "")); return
+        if th==STRING_HASH:
+            out.append("%s%s = %r"%(pad,label,_str(d,o))); return
         t=lib.get(th)
         if t is None:
             out.append("%s%s : <unknown type %08X>"%(pad,label,th)); return
@@ -240,6 +255,7 @@ def to_py(adf,lib,inst,maxdepth=64):
                  ('uint32',4):'<I',('int32',4):'<i',('uint64',8):'<Q',('int64',8):'<q',
                  ('float',4):'<f',('double',8):'<d'}[(n,sz)]
             return struct.unpack_from(fmt,d,o)[0]
+        if th==STRING_HASH: return _str(d,o)
         t=lib.get(th)
         if t is None or depth>maxdepth: return None
         k=t['type']

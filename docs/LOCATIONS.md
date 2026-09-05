@@ -55,6 +55,11 @@ Steam guides group them:
 **Open:** which *name* is which *number*. `jeet02` is one of Jeet's five zones,
 but nothing yet says which. The map textures are alphabetical, not indexed.
 
+The walkthrough's four camp categories — Oil Pump, Transfer Tank, Stank Gum and
+Top Dog — match the game's own marker icons one for one (`pump_camp`,
+`transfer_camp`, `stankgum`, `top_dog_camp`), which is independent confirmation
+of the icon taxonomy in §3.
+
 **Unconfirmed:** `tracked_objects.bl` list[0] holds **16** object ids that match
 no save table — the same 16 as the zone count. That is suggestive and no more.
 Hashing 10,044 name variants of every zone token and map name against those ids
@@ -74,9 +79,9 @@ Gastown, `a00` = global/shared.
 | `sc` | 97 | **Scarecrow** | exact: `tracked_objects` list[2] = 97 ids → roster types 45–48 |
 | `sn` | 38 | **Sniper** | `tracked_objects` list[1] = 35 → roster type 49 (35). 38 ids, 3 presumed unused |
 | `minefield_<zone>_NN` | 31 | **Minefield** | `tracked_objects` list[3] = 30 → roster type 52 (30) |
-| `sd` | 19 | **Scrap depot / camp** | has intel markers (`intelsd`, 12) → it is a camp |
-| `fd` | 6 | **Fuel depot / camp** | roster type 42 has exactly 6, all cleared at 100%; `intelfd` (4) |
-| `wc` | 4 | **Warchief camp** (top dog) | roster type 35 has exactly 4, all cleared at 100%; `intelwc` (4); icon `top_dog_camp` |
+| `sd` | 19 | **Camp** | has intel markers (`intelsd`, 12) → it is a camp |
+| `fd` | 6 | **Camp, fuel depot** | profile 42: exactly 6, worth 14 threat each — see [ECONOMY.md](ECONOMY.md) |
+| `wc` | 4 | **Camp, warchief (top dog)** | `intelwc` (4); icon `top_dog_camp`; inside the 31 profile-43 camps |
 | `vv` | 5 | camp, kind unknown | `a01_vv1050_camp.blo`; no intel markers, no roster match |
 | `fo` | 2 | unknown | `a02_fo2020`, `a02_fo2040`; `_gameplay` sub-file like the camps |
 | `enc` | 5 | **Stronghold** (encampment) | `CEncampmentInventory`, `GetEncampmentLevel`; `enc1010_level_01..05` |
@@ -87,9 +92,12 @@ Gastown, `a00` = global/shared.
 | `mm`, `sm` | 16, 9 | main / side missions | `a00_gui_streamed_locations_side_mission_smNNNN` |
 | `intel`, `intelsd`, `intelwc`, `intelfd` | 21, 12, 4, 4 | **Information encounter** | the camp-hint markers that vanish once you take the camp |
 
-Camps with intel markers total **29** (`sd` 19 + `fd` 6 + `wc` 4), which is
-consistent with `GameProgressionEnemyCamps` and `camp_type_total_count` being a
-single progression counter, but nothing has confirmed that number yet.
+**There are 37 camps.** That is now a hard number, not an inference:
+`global/regioninfo.regioninfoc` groups economy-table rows by threat class and
+slot 0 holds exactly 37. They split 6 (profile 42, worth 14 threat) + 31
+(profile 43, worth 6). The file list has `sd` 19 + `wc` 4 + `vv` 5 + `fo` 2 = 30
+camp-shaped ids against that 31, one short — consistent with Gibbed's list being
+partial. See [ECONOMY.md](ECONOMY.md).
 
 ### Not yet placed
 
