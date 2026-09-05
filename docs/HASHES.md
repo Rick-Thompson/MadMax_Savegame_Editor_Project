@@ -93,6 +93,17 @@ model reached the same result from a different candidate set (58,995 strings),
 and additionally swept Jenkins seeds 0-255 and tried FNV-1a, DJB2, SDBM, CRC-32
 and Murmur3. Also zero.
 
+### Also ruled out: a 64-bit lookup3
+
+The property store's keys are 64-bit, and lookup3's `hashlittle2` naturally
+produces two 32-bit words (`b` and `c`) - Avalanche uses `c` alone for its
+32-bit hashes. So `(c<<32)|b` or `(b<<32)|c` was an obvious candidate for the
+64-bit keyspace.
+
+Tested both orders against all 398,623 harvested binary strings and their
+lowercased forms, over the 10,738 keys in the 100% save: **zero matches, both
+ways.** Recorded so nobody spends an evening on it.
+
 ### A retracted result
 
 An earlier version of this file reported one name recovered:

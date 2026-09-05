@@ -69,7 +69,8 @@ capture of one camp cleared step by step would settle it.
 
 ## 4. The rest of the resource stream
 
-Scrap is record id 42, an f32. Ids **41, 26 and 28** change plausibly with
+Scrap is an f32 in the resource stream (its id moves between saves - see
+FORMAT.md). Ids **41, 26 and 28** change plausibly with
 health, fuel and water but have not been confirmed. Confirming one is a
 five-minute experiment: note the value in game, save, change only that resource,
 save again, diff.
@@ -97,7 +98,7 @@ identical across both, and across save format generations 2 and 6. Consoles are
 entirely untested.
 
 **Windows writes: the core path is confirmed.** A player edited their scrap on
-Windows (`resource.py set 42=N`) and the game loaded the result without
+Windows (`resource.py set 42=N`, the old fixed-id form) and the game loaded the result without
 complaint. That is the single most important thing to have verified off-Linux,
 because it exercises the whole decode -> edit -> reseal chain: the XOR key, the
 mirror and padding layout, length preservation, and above all the **delta-carry
@@ -109,7 +110,7 @@ Still unverified on Windows, in rough order of risk:
 
 | edit class | example | exercised by the scrap test? |
 |---|---|---|
-| resource stream record | `resource.py set 42=N` | **yes** |
+| resource stream record | `resource.py scrap` | **yes** |
 | section-2 table entry | `mmworld.py --restore-type`, roster/marker edits | no |
 | property store record | `convoy.py reset` | no |
 | slot-byte rewrite | `--slot N` | no |

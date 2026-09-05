@@ -53,7 +53,7 @@ reproducible from the sample saves in `data/`.
 | disassemble XVM gameplay scripts | `xvm.py` | yes |
 | restore a destroyed scarecrow, sniper tower, etc. | `mmworld.py --restore-type` | **yes, in game** |
 | destroy objects in bulk (for testing) | `mmworld.py --destroy-type` | **yes, in game** |
-| set scrap | `resource.py set 42=N` | **yes, in game** |
+| set scrap | `resource.py scrap IN OUT N` | **yes, in game** |
 | inspect the 13 convoys | `convoy.py list` | yes |
 | restore cleared convoys | `convoy.py reset --state 2` | **yes, in game** |
 | name every roster entry from the game's data | `economy.py tables / dump` | yes |

@@ -295,7 +295,25 @@ hash, a type word and a world position as three floats. Further in, at about
 sorted ascending hash array that shifts on every insert.
 
 **Region B** is easier: ordinary `(u32 id, u32 size, value)` streams with
-sequential ids. `resource.py` reads one of them - scrap is id 42.
+sequential ids. `resource.py` reads one of them, the player resource stream.
+
+**Record ids in these streams are positional, not stable.** The stream grows as
+the playthrough does, and everything after an insertion point shifts. Scrap sits
+at id 42 in PT1, id 50 in PT2 and PT3, and id 48 in PT4-PT6 - same field, same
+save series. Anything that addresses these streams by a fixed id is addressing a
+different thing on a different save, so `resource.py` locates scrap by its
+structural signature instead:
+
+```
+u32 k    u32 4  u32 k+1      a record whose value is the id of the next record
+u32 k+1  u32 4  f32 m        1.0 in five of the six ladder saves, 0.5 in PT4
+u32 k+2  u32 4  f32 scrap
+u32 k+3  u32 1  u8  1
+```
+
+Matched on the raw bytes, that signature hits exactly twice in every one of the
+14 saves tested - the payload copy and the mirror copy - and never anywhere
+else.
 
 Neither region is understood well enough to edit safely. Region A is the more
 interesting of the two: it is where a shot-up support car persisted across
@@ -419,8 +437,9 @@ artefact. Modify entries in place; never delete them.
 | `mmrestore.py --obj --marker` | restore a destroyed object (both halves) |
 | `scan.py SAVE=VALUE …` | intersection value scan, for fields with no known offset |
 
-Scrap is record id 42 (f32) in the resource stream - `resource.py list` /
-`resource.py set 42=50000`. Found by the intersection scan across two autosaves
+Scrap is an f32 in the resource stream - `resource.py scrap IN OUT 50000`.
+Its record id is **not** fixed (42 / 48 / 50 across the reference ladder), so it
+is found by structure rather than by id; see above. Found by the intersection scan across two autosaves
 with known totals (161 and 10,000,000).
 
 When hunting an unknown field, diff `tail.py` first. It is the quietest channel

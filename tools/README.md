@@ -64,7 +64,8 @@ tailedit.py edit IN.sav OUT.sav --set HASH=HEX --orphan HASH [--slot N]
                                      records the game recreates on demand.
 convoy.py list SAVE.sav              the 13 convoys: roster state + position row
 mmworld.py SAVE.sav --status         what is destroyed, by object type
-resource.py list SAVE.sav            the resource stream (scrap is id 42)
+resource.py list SAVE.sav            every section-2 record stream, with ids
+resource.py scrap SAVE.sav           read scrap
 ```
 
 ## Editing
@@ -77,7 +78,12 @@ mmworld.py IN OUT --restore-all [--slot N]
 mmworld.py IN OUT --destroy-type 45 [--slot N]        for testing
 
 mmrestore.py IN OUT --obj <roster key> --marker <tracking key> [--slot N]
-resource.py set IN OUT 42=50000 [--slot N]
+resource.py scrap IN OUT 50000 [--slot N]     preferred - finds scrap by
+                                     structure. Record ids in these streams are
+                                     positional and move between saves (scrap is
+                                     42 / 48 / 50 across the reference ladder),
+                                     so `set ID=` is only safe after `list`.
+resource.py set IN OUT 48=50000 [--slot N]
 
 convoy.py reset IN OUT [--slot N] [--state S]   restore ALL convoys
                                      state 0 = present but undiscovered
