@@ -70,7 +70,14 @@ continuously across the whole file. XOR is its own inverse.
 | … | | optional identical mirror copy of the payload |
 | … | | zero padding to a 512-byte boundary |
 
-The mirror is optional — detect it, don't assume it.
+The mirror is optional — detect it, don't assume it. **Detect the layout, not the
+content.** Measured across 51 saves: 50 have room for a second block and 48 have
+it byte-identical. A file whose two blocks differ still has two blocks, so
+deciding how many copies to write from a content comparison silently drops one
+and halves the file. `madmax_save.mirror_room()` answers the layout question,
+`has_mirror()` the content one; `sec2edit.rebuild` uses the first and refuses
+outright when the two blocks disagree, because nothing here knows which one the
+game reads.
 
 ---
 
