@@ -28,7 +28,13 @@ import io, json, os, contextlib, importlib.util
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 def _t(n):
-    s = importlib.util.spec_from_file_location(n[:-3], os.path.join(HERE, n))
+    p = os.path.join(HERE, n)
+    if not os.path.exists(p):
+        raise SystemExit(
+            "%s is not bundled with this build. mkweb.py derives the bundle by "
+            "following filename references from webapi.py; if this one is reached "
+            "some other way, it needs adding there." % n)
+    s = importlib.util.spec_from_file_location(n[:-3], p)
     m = importlib.util.module_from_spec(s); s.loader.exec_module(m); return m
 
 M = _t('madmax_save.py')

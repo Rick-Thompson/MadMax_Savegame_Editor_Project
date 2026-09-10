@@ -41,6 +41,13 @@ jobs:
       - name: Regenerate manifest and bundled tools
         run: python3 tools/mkweb.py
 
+      - name: Exercise every capability against ONLY the bundled files
+        # Runs from a directory containing just what mkweb.py bundled, which is
+        # what the browser gets. A tool the page needs but the bundle misses
+        # fails here instead of in front of a user - that is not hypothetical,
+        # it is how the first live run broke.
+        run: python3 tools/test_bundle.py
+
       - name: Fetch Pyodide (core runtime only)
         run: |
           set -euo pipefail

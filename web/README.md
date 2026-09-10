@@ -54,6 +54,24 @@ no manifest editing.
 | `structural` | provably correct against the format, never tested in game |
 | `speculative` | inferred, could be wrong |
 
+## Testing
+
+```sh
+python3 tools/test_bundle.py            # the whole ladder
+python3 tools/test_bundle.py my.sav     # one save
+```
+
+This copies **only the bundled files** into an empty directory and runs every
+capability from there, chaining each edit into the next, then checks length,
+checksum and both payload copies. It runs in CI before every deploy.
+
+Running from `tools/` proves nothing about the page: everything imports there.
+The tools reach for each other lazily by filename — `convoy.py` only opens
+`tailedit.py` at the moment you reset a convoy — so a file missing from the
+bundle passes every ordinary test and then crashes on the one button that needs
+it. That is exactly how the first live run broke, which is why `mkweb.py` now
+derives the bundle by following filename references instead of keeping a list.
+
 ## Safety rails
 
 Every write goes through `webapi._verify()`, which refuses the result if the

@@ -16,15 +16,36 @@ Produces, all generated - never hand-edit them:
 The point of generating rather than hand-writing: the page cannot drift from the
 tools. Fix a tool, rebuild, and the editor is fixed too.
 """
-import json, os, sys, importlib.util
+import json, os, re, sys, importlib.util
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 WEB  = os.path.join(ROOT, 'web')
 
-# Everything webapi.py can reach, directly or through _t().
-TOOLS = ['madmax_save.py', 'sec2edit.py', 'tail.py', 'resource.py', 'convoy.py',
-         'mmworld.py', 'relics.py', 'names.py', 'webapi.py']
+# Which tools to bundle is DERIVED, never listed by hand. The tools import each
+# other lazily by filename at call time - convoy.py only reaches for tailedit.py
+# once you actually reset a convoy - so a hand-kept list looks complete right up
+# until a user clicks the one button that needs the missing file. That is exactly
+# what happened on the first live run.
+REF = re.compile(r"""['"]([a-z0-9_]+\.py)['"]""")
+
+def closure(start='webapi.py'):
+    """Every .py the page could reach from `start`, following filename literals
+    transitively. Over-inclusion costs a few KB; under-inclusion is a crash in
+    front of a user."""
+    seen, queue, prose = set(), [start], set()
+    while queue:
+        n = queue.pop()
+        if n in seen or n in prose: continue
+        if not os.path.exists(os.path.join(HERE, n)):
+            prose.add(n)           # a filename mentioned in a docstring, not an import
+            continue
+        seen.add(n)
+        for m in REF.findall(open(os.path.join(HERE, n), encoding='utf-8').read()):
+            if m not in seen: queue.append(m)
+    if prose:
+        print("  (mentioned but not a file, ignored: %s)" % ", ".join(sorted(prose)))
+    return sorted(seen)
 
 def _load(name):
     p = os.path.join(HERE, name)
@@ -42,10 +63,8 @@ def main():
     print("manifest.json  %d capabilities" % len(man))
 
     src = {}
-    for t in TOOLS:
-        p = os.path.join(HERE, t)
-        if not os.path.exists(p): sys.exit("missing tool: %s" % t)
-        src[t] = open(p, encoding='utf-8').read()
+    for t in closure():
+        src[t] = open(os.path.join(HERE, t), encoding='utf-8').read()
     json.dump(src, open(os.path.join(WEB, 'pytools.json'), 'w'))
     print("pytools.json   %d files, %d KB" % (len(src), sum(map(len, src.values())) // 1024))
 
