@@ -67,6 +67,39 @@ never draws are stored somewhere else. The property store is the obvious
 candidate, since that is where the convoy answer turned out to be. A staged
 capture of one camp cleared step by step would settle it.
 
+## 2b. delta(L): confirmed a pure function of length, still not derived
+
+Measured across **51 saves at 18 distinct file lengths**: every pair sharing a
+length shares a delta, with zero exceptions. So `delta` really is `f(fileLength)`
+and nothing else - the carry-across-an-edit trick is safe, and a lookup table of
+known lengths is a legitimate way to produce a file at a length you have seen.
+
+Deriving `f` is what would lift the length-preserving restriction entirely. The
+obvious family has been **ruled out**. If v6 were the same reflected CRC-32 over
+some contiguous range with a different init and xorout, then
+
+    delta(L) = T(n(L), D) xor E
+
+where `T(n, x)` advances a CRC register through `n` zero bytes (GF(2)-linear),
+`D` is the init difference and `E` the xorout difference. That is 64 unknown bits
+against 18 data points, so it is heavily overdetermined and easy to test by
+Gaussian elimination over GF(2). Every candidate byte range gives an
+**inconsistent system**:
+
+    [4:EOF]                    n = L-4                inconsistent
+    [4:header+payload]         n = PAYLOAD_START+bl-4 inconsistent
+    [4:payload]                n = bl                 inconsistent
+    [4:header+both copies]     n = PAYLOAD_START+2bl-4 inconsistent
+    n = L, n = L-PAYLOAD_START                        inconsistent
+
+Note what the data forces, independent of any model: `checksum()` varies with
+payload content, and `delta` does not, so the stored value must vary with content
+in exactly the same way. v6 is therefore the *same* CRC over the *same* bytes,
+plus a length-keyed constant. Something in the file or the code is being folded
+in that is a function of length alone - a version field, a block count, a size
+written into the seed. Worth looking for in a disassembler rather than by
+fitting more models.
+
 ## 3b. Can an insert be made length-preserving?
 
 Everything here has to preserve file length, which rules out adding records -
