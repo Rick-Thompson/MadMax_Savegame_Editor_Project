@@ -137,11 +137,23 @@ def header(d: bytes) -> dict:
     return h
 
 
-def has_mirror(d: bytes) -> bool:
-    """Some saves store the payload block twice, some only once.
+def mirror_room(d: bytes) -> bool:
+    """Is there a second payload block in this file's LAYOUT?
 
-    Detect it rather than assume it: the file must be long enough AND the
-    second copy must actually equal the first.
+    Ask this, not has_mirror(), when deciding how many copies to write out.
+    Layout and content are different questions: of 51 saves measured, 50 have
+    room for a second block and 48 have it byte-identical - so a file whose
+    copies differ still has two blocks, and writing only one would halve it.
+    """
+    h = header(d)
+    return len(d) >= h["mirror_at"] + h["block_len"]
+
+
+def has_mirror(d: bytes) -> bool:
+    """Are the two payload blocks byte-identical?
+
+    A CONTENT check, useful for verifying an edit came out consistent. It is
+    the wrong test for deciding output layout - see mirror_room().
     """
     h = header(d)
     n, m = h["block_len"], h["mirror_at"]

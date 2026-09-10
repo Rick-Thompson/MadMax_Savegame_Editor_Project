@@ -1,0 +1,98 @@
+[
+ {
+  "label": "Save file",
+  "group": "This save",
+  "verified": "in-game",
+  "order": 0,
+  "id": "info",
+  "help": "Slot, playtime and format, plus the integrity check. Read this first to\n    be sure you picked the file you meant to.",
+  "kind": "report"
+ },
+ {
+  "label": "Scrap",
+  "group": "Resources",
+  "verified": "in-game",
+  "min": 0,
+  "max": 999999,
+  "step": 1,
+  "order": 10,
+  "id": "scrap",
+  "help": "The scrap in your inventory. Confirmed to load correctly on Windows as\n    well as Linux. Its record id moves between saves, so it is located by the\n    shape of the record around it rather than by a fixed id.",
+  "kind": "number"
+ },
+ {
+  "label": "Restore all convoys",
+  "group": "Activities",
+  "verified": "in-game",
+  "params": [
+   {
+    "id": "state",
+    "label": "Bring them back as",
+    "type": "choice",
+    "default": "2",
+    "choices": [
+     [
+      "2",
+      "Active - marked red on the map, playable"
+     ],
+     [
+      "0",
+      "Undiscovered - present, not yet on the map"
+     ],
+     [
+      "3",
+      "Wrecked - what killing one writes"
+     ]
+    ]
+   }
+  ],
+  "order": 20,
+  "id": "convoy_reset",
+  "help": "Puts every convoy in the world back. Verified in game twice, on a live\n    playthrough and on a 100% save: the routes come back marked in red and\n    driving to one gives a complete, working convoy.\n\n    This writes the record that actually governs a convoy. Six earlier attempts\n    failed by editing records that only describe one.",
+  "kind": "action"
+ },
+ {
+  "label": "Restore destroyed threats",
+  "group": "Activities",
+  "verified": "in-game",
+  "params": [
+   {
+    "id": "klass",
+    "label": "Put back",
+    "type": "choice",
+    "default": "all",
+    "choices": [
+     [
+      "all",
+      "Everything destroyed (recommended)"
+     ],
+     [
+      "scarecrow",
+      "Scarecrows only (97 in the world)"
+     ],
+     [
+      "sniper",
+      "Snipers only (35)"
+     ],
+     [
+      "minefield",
+      "Minefields only (30)"
+     ]
+    ]
+   }
+  ],
+  "order": 30,
+  "id": "restore_threats",
+  "help": "Puts destroyed threats back - both the object and its map marker, which\n    both have to move or you get an object with no marker, or a marker with no\n    object.\n\n    Restoring scarecrows has been verified in game. Snipers and minefields use\n    exactly the same mechanism on the same tables, but have not been loaded and\n    checked, so treat them as structural until someone does.\n\n    The intact value is read back from the save itself rather than assumed:\n    it is not always 1.0, and writing a flat 1.0 would corrupt the classes that\n    keep a count or a timer in that field.\n\n    Prefer \"everything destroyed\". Restoring one class on its own still clears\n    every cleared map marker, so the other classes end up with a marker and no\n    object behind it - harmless, but the map will not match what is out there.",
+  "kind": "action"
+ },
+ {
+  "label": "Collectibles",
+  "group": "This save",
+  "verified": "structural",
+  "order": 40,
+  "id": "collectibles",
+  "help": "History relics and hood ornaments you have picked up, checked against the\n    game's own relic table. Read-only: adding one means adding a record, and\n    every edit here has to keep the file length identical.",
+  "kind": "report"
+ }
+]

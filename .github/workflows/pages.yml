@@ -1,0 +1,94 @@
+name: Deploy save editor to Pages
+
+# The editor lives in web/. docs/ is the written documentation and is NOT the
+# site, which is why this deploys an artifact instead of pointing Pages at a
+# branch folder.
+#
+# Pyodide is fetched here rather than committed: the repo stays small, and the
+# deployed site still serves it from its own origin, so a visitor makes no
+# third-party requests.
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', 'tools/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  # Bump when you want a newer runtime. If this tag ever disappears the build
+  # falls back to the latest release rather than failing.
+  PYODIDE_VERSION: "0.26.4"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Regenerate manifest and bundled tools
+        run: python3 tools/mkweb.py
+
+      - name: Fetch Pyodide (core runtime only)
+        run: |
+          set -euo pipefail
+          ver="${PYODIDE_VERSION}"
+          url="https://github.com/pyodide/pyodide/releases/download/${ver}/pyodide-core-${ver}.tar.bz2"
+          if ! curl -sfIL "$url" >/dev/null; then
+            echo "::warning::pyodide-core ${ver} not found, falling back to the latest release"
+            ver=$(curl -s https://api.github.com/repos/pyodide/pyodide/releases/latest \
+                  | grep -o '"tag_name": *"[^"]*"' | head -1 | cut -d'"' -f4)
+            url="https://github.com/pyodide/pyodide/releases/download/${ver}/pyodide-core-${ver}.tar.bz2"
+          fi
+          echo "using pyodide ${ver}"
+          curl -sfL "$url" -o /tmp/pyodide.tar.bz2
+          mkdir -p web/vendor
+          tar -xjf /tmp/pyodide.tar.bz2 -C web/vendor
+          # the tarball is expected to unpack to pyodide/
+          if [ ! -f web/vendor/pyodide/pyodide.js ]; then
+            echo "::error::unexpected tarball layout - contents were:"; ls -R web/vendor | head -40
+            exit 1
+          fi
+          # ship the licences alongside it
+          printf '%s\n' "Pyodide ${ver} - Mozilla Public License 2.0" \
+                        "CPython - Python Software Foundation License" \
+            > web/vendor/pyodide/BUNDLED-LICENSES.txt
+          du -sh web/vendor/pyodide
+
+      - name: Guard against third-party requests
+        run: |
+          # Only asset loads matter here. A plain <a href> to the repo is a link
+          # the visitor may click, not something the browser fetches.
+          if grep -nEi '<script[^>]+src="https?:|<link[^>]+href="https?:|<img[^>]+src="https?:|@import|url\(https?:|fetch\(["'"'"']https?:' web/index.html web/app.js; then
+            echo "::error::web/ loads an external asset - everything must be same-origin"
+            exit 1
+          fi
+          echo "no external assets"
+
+      - run: touch web/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,3 @@
+# The Pyodide runtime is fetched at build time, never committed - see
+# fetch-pyodide.sh and .github/workflows/pages.yml.
+pyodide/

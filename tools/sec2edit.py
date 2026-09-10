@@ -96,7 +96,18 @@ def rebuild(inp,out,adds,dels,slot=None,sets=()):
     hdr=bytearray(d[:m.PAYLOAD_START])
     struct.pack_into('<Q',hdr,0x10,m.PAYLOAD_START+len(payload))
     if slot is not None: hdr[0x48]=slot
-    body=bytes(hdr)+payload+(payload if m.has_mirror(d) else b'')
+    # Layout, not content: a file with two blocks keeps two blocks even if they
+    # currently differ. Using has_mirror() here silently dropped the second copy
+    # and halved such a file.
+    if m.mirror_room(d):
+        if not m.has_mirror(d):
+            raise SystemExit(
+                "refusing: this save has two payload blocks that are NOT identical, "
+                "so there is no safe way to know which one the game reads. Nothing "
+                "was written.")
+        body=bytes(hdr)+payload+payload
+    else:
+        body=bytes(hdr)+payload
     body+=b'\x00'*((-len(body))%512)
     print("  payload %d -> %d ; file %d -> %d %s"%(h['block_len'],len(payload),len(d),len(body),
           "(unchanged - delta valid)" if len(body)==len(d) else "*** LENGTH CHANGED ***"))

@@ -8,3 +8,4 @@ _test_variants/
 *.pkl
 /tmp/
 _to_delete/
+web/vendor/pyodide/

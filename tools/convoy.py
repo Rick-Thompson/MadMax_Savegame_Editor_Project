@@ -119,8 +119,20 @@ def cmd_reset(inp,out,slot,state=0):
         if bytes(v)==bytes(new): continue
         d2[off+24:off+24+32]=bytes(new); n+=1
     print("  property store: %d container records set to state %d, position cleared"%(n,state))
-    body=bytes(d2)
+    # The container records were patched in the primary payload only. Most saves
+    # store the payload TWICE, and leaving the second copy stale makes the file
+    # internally inconsistent: the game loaded it fine, but has_mirror() then
+    # reports no mirror, and any later edit through sec2edit.rebuild drops the
+    # second copy entirely and changes the file length. Re-mirror before writing.
+    body=bytearray(d2)
+    if m.mirror_room(orig):
+        h0=m.header(orig); nb,mo=h0['block_len'],h0['mirror_at']
+        body[mo:mo+nb]=body[m.PAYLOAD_START:m.PAYLOAD_START+nb]
+        print("  mirror: second payload copy refreshed")
+    body=bytes(body)
     if len(body)!=len(orig): sys.exit("length changed - refusing")
+    if m.mirror_room(orig) and not m.has_mirror(body):
+        sys.exit("second payload copy did not come out identical - refusing")
     m.save(out, m.reseal(body, m.delta_of(orig)))
     os.remove(tmp)
     print("  wrote %s (%d bytes)"%(out,len(body)))

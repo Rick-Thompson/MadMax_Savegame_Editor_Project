@@ -28,6 +28,12 @@ and a world position read from the game's data rather than inferred. That is
 also what settles the counts: **37 camps**, 97 scarecrows, 35 snipers, 13
 convoys, 30 minefields. See [docs/ECONOMY.md](docs/ECONOMY.md).
 
+There is a **browser editor** at
+<https://rick-thompson.github.io/MadMax_Savegame_Editor_Project/> - it runs the
+tools in this repo in your own tab, with no upload and no third-party requests.
+See [web/README.md](web/README.md), including how adding a capability to it is
+one entry in `tools/webapi.py`.
+
 This is published so other people can take it further. Everything here is
 reproducible from the sample saves in `data/`.
 
